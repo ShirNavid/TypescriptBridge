@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TsHandler.Build/TsHandler.Build.csproj" />
+    <Project Path="src/TsHandler.Tool/TsHandler.Tool.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TsHandler.IntegrationTests/TsHandler.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

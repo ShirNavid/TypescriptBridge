@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "typescript": {
+    "target": "es2020",
+    "format": "iife"
+  },
+  "debug": {
+    "sourceMap": {
+      "enabled": true
+    }
+  },
+  "release": {
+    "minify": {
+      "level": "aggressive",
+      "keepNames": false
+    }
+  }
+}

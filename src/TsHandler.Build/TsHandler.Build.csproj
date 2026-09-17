@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+
+    <PackageId>TsHandler.Build</PackageId>
+    <Version>0.2.7-local</Version>
+    <Authors>TsHandler</Authors>
+    <Description>MSBuild integration for TsHandler. Compiles TypeScript into C# readonly fields at build time, with full JSON Schema-based IntelliSense and validation.</Description>
+    <PackageTags>typescript;msbuild;build;codegen;schema</PackageTags>
+
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="build\TsHandler.Build.targets"
+          Pack="true"
+          PackagePath="build\TsHandler.Build.targets" />
+
+    <None Include="schema\ts-handler.schema.json"
+          Pack="true"
+          PackagePath="tools\schema\ts-handler.schema.json" />
+
+    <None Include="..\TsHandler.Tool\bin\$(Configuration)\net8.0\**\*"
+          Pack="true"
+          PackagePath="tools\net8.0\any\"
+          Exclude="..\TsHandler.Tool\bin\$(Configuration)\net8.0\**\*.pdb" />
+
+    <None Include="..\..\tools\esbuild\win-x64\esbuild.exe"
+          Pack="true"
+          PackagePath="tools\esbuild\win-x64\esbuild.exe" />
+  </ItemGroup>
+
+</Project>
+
+

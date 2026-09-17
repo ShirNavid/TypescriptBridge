@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TsHandler.Build" Version="0.2.7-local" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="ts-handler.schema.json" />
+    <None Include="ts-handler.schema.json" Visible="false" />
+  </ItemGroup>
+
+</Project>

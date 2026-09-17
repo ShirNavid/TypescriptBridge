@@ -1,0 +1,37 @@
+<Project>
+
+  <PropertyGroup>
+    <TsHandlerToolPath Condition="'$(TsHandlerToolPath)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\net8.0\any\TsHandler.Tool.dll'))</TsHandlerToolPath>
+    <TsHandlerDotnetExe Condition="'$(TsHandlerDotnetExe)' == '' AND '$(DOTNET_HOST_PATH)' != ''">$(DOTNET_HOST_PATH)</TsHandlerDotnetExe>
+    <TsHandlerDotnetExe Condition="'$(TsHandlerDotnetExe)' == ''">dotnet</TsHandlerDotnetExe>
+    <TsHandlerEsbuildDir Condition="'$(TsHandlerEsbuildDir)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\esbuild'))</TsHandlerEsbuildDir>
+    <TsHandlerConfigPath Condition="'$(TsHandlerConfigPath)' == ''">$(MSBuildProjectDirectory)\ts-handler.json</TsHandlerConfigPath>
+    <TsHandlerIntermediateOutputPath Condition="'$(TsHandlerIntermediateOutputPath)' == ''">$(MSBuildProjectDirectory)\$(IntermediateOutputPath)TsHandler</TsHandlerIntermediateOutputPath>
+    <TsHandlerEnabled Condition="'$(TsHandlerEnabled)' == ''">true</TsHandlerEnabled>
+  </PropertyGroup>
+
+  <Target Name="TsHandlerGenerate"
+          BeforeTargets="CoreCompile"
+          Condition="'$(TsHandlerEnabled)' == 'true' AND '$(DesignTimeBuild)' != 'true'">
+
+    <Message Text="TsHandler: running tool..." Importance="normal" />
+
+    <MakeDir Directories="$(TsHandlerIntermediateOutputPath)" />
+
+    <PropertyGroup>
+      <TsHandlerEsbuildBin>$(TsHandlerEsbuildDir)\win-x64\esbuild.exe</TsHandlerEsbuildBin>
+      <TsHandlerCommand>&quot;$(TsHandlerDotnetExe)&quot; exec &quot;$(TsHandlerToolPath)&quot; --config &quot;$(TsHandlerConfigPath)&quot; --project &quot;$(MSBuildProjectDirectory)&quot; --intermediate &quot;$(TsHandlerIntermediateOutputPath)&quot; --configuration &quot;$(Configuration)&quot;</TsHandlerCommand>
+    </PropertyGroup>
+
+    <Exec Command="$(TsHandlerCommand)"
+          EnvironmentVariables="TS_HANDLER_ESBUILD_PATH=$(TsHandlerEsbuildBin)"
+          ConsoleToMSBuild="true"
+          ContinueOnError="false">
+      <Output TaskParameter="ConsoleOutput" ItemName="TsHandlerOutput" />
+      <Output TaskParameter="ExitCode" PropertyName="TsHandlerExitCode" />
+    </Exec>
+
+    <Message Text="%(TsHandlerOutput.Identity)" Importance="normal" />
+  </Target>
+
+</Project>
