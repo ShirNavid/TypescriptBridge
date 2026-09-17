@@ -8,10 +8,16 @@
     <NoWarn>$(NoWarn);NU5128</NoWarn>
 
     <PackageId>TsHandler.Template</PackageId>
-    <Version>0.2.15-local</Version>
-    <Authors>TsHandler</Authors>
+    <Version>1.0.0</Version>
+    <Authors>ShirNavid</Authors>
     <Description>Template for creating TsHandler projects. Includes JSON Schema for full IntelliSense and validation of ts-handler.json.</Description>
     <PackageTags>dotnet-new;templates;typescript;codegen;schema</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ShirNavid/TsHandler</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ShirNavid/TsHandler</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
 
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <EnableDefaultItems>false</EnableDefaultItems>
@@ -22,6 +28,16 @@
              Exclude="content\**\bin\**;content\**\obj\**;content\**\.vs\**"
              PackagePath="content\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Remove="**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md"
+          Pack="true"
+          PackagePath="\" />
+
+    <None Include="icon.png"
+          Pack="true"
+          PackagePath="\" />
   </ItemGroup>
 
 </Project>
