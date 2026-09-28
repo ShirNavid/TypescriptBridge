@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://typescript-bridge.dev/schema/v1.json",
+  "title": "TypeScript Bridge Configuration",
+  "description": "Configuration for the TypeScript Bridge build integration.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Configuration for the generated C# output.",
+      "properties": {
+        "className": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "Name of the generated C# static class.",
+          "default": "TypescriptProvider"
+        },
+        "fieldName": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "Name of the generated C# readonly string field.",
+          "default": "TypescriptCode"
+        }
+      }
+    },
+    "typescript": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "ECMAScript target version.",
+          "enum": [
+            "es2015",
+            "es2016",
+            "es2017",
+            "es2018",
+            "es2019",
+            "es2020",
+            "es2021",
+            "es2022",
+            "esnext"
+          ],
+          "default": "es2020"
+        },
+        "format": {
+          "type": "string",
+          "description": "Output module format. Use 'iife' for direct <script> embedding.",
+          "enum": [
+            "iife",
+            "esm",
+            "cjs"
+          ],
+          "default": "iife"
+        }
+      }
+    },
+    "minify": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "type": "string",
+          "description": "Minification level.",
+          "enum": [
+            "off",
+            "light",
+            "full",
+            "aggressive"
+          ],
+          "default": "aggressive"
+        },
+        "keepNames": {
+          "type": "boolean",
+          "description": "Preserve function and class names when mangling. Only applies when level is aggressive.",
+          "default": true
+        }
+      }
+    }
+  }
+}

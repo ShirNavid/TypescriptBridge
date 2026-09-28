@@ -1,8 +1,0 @@
-{
-  "json.schemas": [
-    {
-      "fileMatch": [ "ts-handler.json" ],
-      "url": "./ts-handler.schema.json"
-    }
-  ]
-}

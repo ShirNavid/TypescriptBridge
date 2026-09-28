@@ -1,33 +1,25 @@
-# TypescriptBridge
+# {ProjectName}
 
-Write TypeScript, consume it from C#. The TypeScript entry point is
-compiled at build time and embedded into a C# readonly string field.
+Write TypeScript in `ts/app.ts`. On every build it is compiled into
+JavaScript and embedded into a C# readonly string field.
+
 No Node.js or npm required.
-
-## Install
-
-    dotnet new install TypescriptBridge.Template
 
 ## Quick start
 
-    dotnet new typescript-bridge -n MyProject
-    cd MyProject
-    dotnet build
-
-Edit `ts/app.ts` and rebuild. The compiled JavaScript becomes available
-in C# as:
-
-    TypescriptProvider.TypescriptCode
-
-For example:
+1. Write TypeScript in `ts/app.ts`.
+2. Run `dotnet build`.
+3. Use the generated C# field:
 
     string html = "<html><body><script>"
                 + TypescriptProvider.TypescriptCode
                 + "</script></body></html>";
 
+The generated file is `Bridge.cs`. Do not edit it manually.
+
 ## Configuration
 
-Optional. All settings have sensible defaults:
+Optional. All settings have sensible defaults in `typescript-bridge.json`:
 
     {
       "output": {

@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+
+    <VSSDKBuildToolsAutoSetup>true</VSSDKBuildToolsAutoSetup>
+    <VsixDeployOnDebug>false</VsixDeployOnDebug>
+    <GeneratePkgDefFile>false</GeneratePkgDefFile>
+
+    <PackageId>TypescriptBridge.Vsix</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>ShirNavid</Authors>
+    <Description>Visual Studio extension for TypescriptBridge. Provides IntelliSense for typescript-bridge.json.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+
+    <VSRoot>C:\Program Files\Microsoft Visual Studio\18\Community</VSRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectCapability Include="CreateVsixContainer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="BridgeSchemaProvider.cs" />
+    <Compile Include="BridgeSchemaSelector.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.9.820" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.WebTools.Languages.Json">
+      <HintPath>$(VSRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="source.extension.vsixmanifest">
+      <SubType>Designer</SubType>
+    </None>
+
+    <!--
+      Include the icon in the VSIX container so that the manifest
+      can reference it and the extension shows a proper icon in VS.
+    -->
+    <None Include="icon.png"
+          IncludeInVSIX="true"
+          PackagePath="icon.png" />
+  </ItemGroup>
+
+</Project>

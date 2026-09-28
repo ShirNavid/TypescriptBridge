@@ -1,0 +1,14 @@
+{
+  "output": {
+    "className": "TypescriptProvider",
+    "fieldName": "TypescriptCode"
+  },
+  "typescript": {
+    "target": "es2020",
+    "format": "iife"
+  },
+  "minify": {
+    "level": "aggressive",
+    "keepNames": true
+  }
+}

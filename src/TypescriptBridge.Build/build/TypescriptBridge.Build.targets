@@ -1,0 +1,65 @@
+<Project>
+
+  <!--
+    TypescriptBridge MSBuild integration.
+
+    This file is imported automatically by consuming projects via the
+    TypescriptBridge.Build NuGet package. It hooks a target before
+    CoreCompile so that the tool runs before the C# compiler sees
+    Bridge.cs.
+  -->
+
+  <PropertyGroup>
+    <!-- Path to the tool assembly inside the package. -->
+    <TypescriptBridgeToolPath Condition="'$(TypescriptBridgeToolPath)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\net8.0\any\TypescriptBridge.Tool.dll'))</TypescriptBridgeToolPath>
+
+    <!-- Preferred dotnet host, falling back to dotnet on PATH. -->
+    <TypescriptBridgeDotnetExe Condition="'$(TypescriptBridgeDotnetExe)' == '' AND '$(DOTNET_HOST_PATH)' != ''">$(DOTNET_HOST_PATH)</TypescriptBridgeDotnetExe>
+    <TypescriptBridgeDotnetExe Condition="'$(TypescriptBridgeDotnetExe)' == ''">dotnet</TypescriptBridgeDotnetExe>
+
+    <!-- Directory containing the esbuild binaries. -->
+    <TypescriptBridgeEsbuildDir Condition="'$(TypescriptBridgeEsbuildDir)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\esbuild'))</TypescriptBridgeEsbuildDir>
+
+    <!-- Path to typescript-bridge.json inside the consuming project. -->
+    <TypescriptBridgeConfigPath Condition="'$(TypescriptBridgeConfigPath)' == ''">$(MSBuildProjectDirectory)\typescript-bridge.json</TypescriptBridgeConfigPath>
+
+    <!-- Intermediate output directory for tool artifacts. -->
+    <TypescriptBridgeIntermediateOutputPath Condition="'$(TypescriptBridgeIntermediateOutputPath)' == ''">$(MSBuildProjectDirectory)\$(IntermediateOutputPath)TypescriptBridge</TypescriptBridgeIntermediateOutputPath>
+
+    <!-- Global switch to disable the bridge during a build. -->
+    <TypescriptBridgeEnabled Condition="'$(TypescriptBridgeEnabled)' == ''">true</TypescriptBridgeEnabled>
+  </PropertyGroup>
+
+  <Target Name="TypescriptBridgeGenerate"
+          BeforeTargets="CoreCompile"
+          Condition="'$(TypescriptBridgeEnabled)' == 'true' AND '$(DesignTimeBuild)' != 'true'">
+
+    <Message Text="TypescriptBridge: running tool..." Importance="normal" />
+
+    <MakeDir Directories="$(TypescriptBridgeIntermediateOutputPath)" />
+
+    <PropertyGroup>
+      <!-- esbuild binary for the current platform. -->
+      <TypescriptBridgeEsbuildBin>$(TypescriptBridgeEsbuildDir)\win-x64\esbuild.exe</TypescriptBridgeEsbuildBin>
+
+      <!--
+        Full command line for the tool.
+
+        The configuration is forwarded from MSBuild's $(Configuration)
+        property so the tool can inject the correct BUILD_MODE constant
+        into the JavaScript output.
+      -->
+      <TypescriptBridgeCommand>&quot;$(TypescriptBridgeDotnetExe)&quot; exec &quot;$(TypescriptBridgeToolPath)&quot; --config &quot;$(TypescriptBridgeConfigPath)&quot; --project &quot;$(MSBuildProjectDirectory)&quot; --intermediate &quot;$(TypescriptBridgeIntermediateOutputPath)&quot; --esbuild &quot;$(TypescriptBridgeEsbuildBin)&quot; --configuration &quot;$(Configuration)&quot;</TypescriptBridgeCommand>
+    </PropertyGroup>
+
+    <Exec Command="$(TypescriptBridgeCommand)"
+          ConsoleToMSBuild="true"
+          ContinueOnError="false">
+      <Output TaskParameter="ConsoleOutput" ItemName="TypescriptBridgeOutput" />
+      <Output TaskParameter="ExitCode" PropertyName="TypescriptBridgeExitCode" />
+    </Exec>
+
+    <Message Text="%(TypescriptBridgeOutput.Identity)" Importance="normal" />
+  </Target>
+
+</Project>

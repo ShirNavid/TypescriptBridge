@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TypescriptBridge.Build" Version="1.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="typescript-bridge.schema.json" />
+    <None Include="typescript-bridge.schema.json" Visible="false" />
+  </ItemGroup>
+
+</Project>
