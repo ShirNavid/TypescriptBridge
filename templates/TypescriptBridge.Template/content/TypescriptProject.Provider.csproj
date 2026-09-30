@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!--
+      This is a library. It compiles Bridge.cs into an assembly that
+      external C# projects can reference. It has no Program.cs and no
+      OutputType.
+    -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Bridge.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TypescriptBridge.Build" Version="1.0.1" />
+  </ItemGroup>
+
+</Project>

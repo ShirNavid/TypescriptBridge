@@ -1,120 +1,120 @@
-# TypescriptProject
+# TypescriptBridge Project
 
-A TypescriptBridge project.
+Write TypeScript. Debug it in Visual Studio with real breakpoints.
+Consume the compiled JavaScript from C# as an embedded string.
 
-Write TypeScript in `ts/app.ts`. On every build it is compiled to
-JavaScript and embedded into a C# readonly string field
-(`TypescriptProvider.TypescriptCode`). The same project can be used
-as a C# library or run directly as a debugging host — with no
-configuration change.
+The developer works in a single project. Everything else is
+infrastructure.
 
-## Two ways to use this project
+## Requirements
 
-### 1. As a library
+- Visual Studio 2026 (for the integrated F5 debugger)
+- .NET SDK 8.0 or later
+- Node.js 18 LTS or later
+- Microsoft Edge or Google Chrome
 
-Reference this project from another C# project:
+## Quick start
 
-    <ProjectReference Include="..\TypescriptProject\TypescriptProject.csproj" />
+1. Open `MyApp.slnx` in Visual Studio.
+2. Edit `ts/app.ts`.
+3. Set a breakpoint.
+4. Press F5.
 
-Then use the compiled TypeScript in your C# code:
+Visual Studio starts a local HTTP server, opens the configured browser,
+and attaches the JavaScript/TypeScript debugger. Your breakpoint is hit.
+
+## Editing TypeScript
+
+The entry point is `ts/app.ts`.
+
+You can add more `.ts` files anywhere under `ts/`. They appear in
+Solution Explorer automatically and are bundled together.
+
+`BUILD_MODE` is a global constant injected at build time. It is
+`"DEBUG"` in Debug builds and `"RELEASE"` in Release builds. It has
+full IntelliSense.
+
+## Adding npm dependencies
+
+`ts/package.json` is empty by default. To add a dependency, open a
+terminal in the project folder and run:
+
+    cd ts
+    npm install lodash
+
+The `node_modules` folder appears under `ts/`. It is hidden in
+Solution Explorer. You can now use the dependency in your TypeScript:
+
+    import _ from "lodash";
+
+The import is resolved by esbuild and included in the final bundle.
+
+## Configuration
+
+`config.json` controls project behavior. All settings have sensible
+defaults.
+
+| Setting | Description | Default |
+| --- | --- | --- |
+| `output.className` | Generated C# class name | `TypescriptProvider` |
+| `output.fieldName` | Generated C# field name | `TypescriptCode` |
+| `bundle.format` | JavaScript module format | `iife` |
+| `release-minify.level` | Minification for Release | `aggressive` |
+| `release-minify.keepNames` | Preserve names when minified | `true` |
+| `run.browser` | Debug browser: `edge` or `chrome` | `edge` |
+| `run.port` | Debug HTTP port | `45000` |
+
+`tsconfig.json` controls the TypeScript language service and the
+TypeScript compilation target.
+
+## Consuming from C#
+
+The compiled JavaScript is embedded in `Bridge.cs` as a C# readonly
+string field. To consume it, add a project reference to
+`MyApp.Provider.csproj` from your C# project:
+
+    <ProjectReference Include="..\MyApp\MyApp.Provider.csproj" />
+
+Then in your C# code:
+
+    using MyApp;
 
     string html = "<html><body><script>"
                 + TypescriptProvider.TypescriptCode
                 + "</script></body></html>";
 
-Program.cs is present in the assembly but is never invoked. There is
-no HTTP server, no browser, and no debug session in this mode.
-
-### 2. As an executable
-
-This project can run itself. When it runs, it starts a local HTTP
-server on loopback, serves the compiled JavaScript, and opens a
-browser so the TypeScript can be debugged directly.
-
-There are two ways to run it:
-
-#### F5 in Visual Studio
-
-1. Open `TypescriptProject.esproj` in Visual Studio 2026.
-2. Right-click `TypescriptProject.esproj` and select
-   **Set as Startup Project**.
-3. Set a breakpoint in `ts/app.ts`.
-4. Press **F5**.
-
-Visual Studio starts the C# host, opens the configured browser, and
-attaches the JavaScript debugger. Breakpoints in `ts/app.ts` are hit.
-
-#### Direct run
-
-    dotnet run
-
-The browser opens automatically. No debugger attaches.
-To debug manually, use:
-
-    Debug -> Attach to Process
-    Attach to: JavaScript and TypeScript (Chrome DevTools Protocol / V8 Inspector)
-    Select the browser process, click Attach.
-
-## Configuration
-
-`config.json`:
-
-    {
-      "output": {
-        "className": "TypescriptProvider",
-        "fieldName": "TypescriptCode"
-      },
-      "typescript": {
-        "target": "es2020",
-        "format": "iife"
-      },
-      "release-minify": {
-        "level": "aggressive",
-        "keepNames": true
-      },
-      "run": {
-        "browser": "edge",
-        "port": 45000
-      }
-    }
-
-### run.browser
-
-`edge` or `chrome`. Determines which browser is launched when the
-project runs as an executable. Ignored when the project is referenced
-as a library.
-
-### run.port
-
-Port for the debug HTTP host. Must be reachable on loopback.
-Default: 45000.
-
-The generated `.vscode/launch.json` (used by F5) references this exact
-port. Changing it here is the only place you need to change it.
-
 ## Files
 
-- `ts/app.ts` — the TypeScript entry point.
-- `Program.cs` — the runtime host (runs only when the project is
-  executed).
-- `config.json` — configuration.
-- `TypescriptProject.esproj` — Visual Studio debug-launch project
-  used by F5.
-- `Prepare-DebugSession.ps1` — regenerates `.vscode/launch.json`
-  from the template on every build.
-- `.vscode/launch.template.json` — the source template for
-  `launch.json`; do not edit `launch.json` directly.
-- `Bridge.cs` — generated; do not edit.
+| File | Purpose |
+| --- | --- |
+| `ts/app.ts` | TypeScript entry point (edit this) |
+| `ts/package.json` | npm dependency manifest |
+| `config.json` | Project configuration |
+| `tsconfig.json` | TypeScript compiler settings |
+| `README.md` | This file |
+| `MyApp.slnx` | Solution file |
+| `MyApp.esproj` | Developer-facing project (F5 target) |
+| `MyApp.Provider.csproj` | C# library project (compiles Bridge.cs) |
+| `Bridge.cs` | Generated C# file (do not edit) |
 
-## Requirements
+## Infrastructure
 
-- .NET 8 SDK or later
-- Visual Studio 2026 for F5 debugging
-- Edge or Chrome (whichever is configured in `run.browser`)
+The following files exist on disk but are not shown in Solution
+Explorer. They are maintained automatically:
+
+- `server.js` — local HTTP server for the debug session
+- `Prepare-DebugSession.ps1` — generates `launch.json` before each F5
+- `.vscode/` — debugger configuration
+- `ts/default-definitions/` — TypeScript global declarations
+- `ts/node_modules/` — npm packages
+- `obj/` — intermediate build output
 
 ## Notes
 
-- The C# host serves the compiled JavaScript over loopback HTTP.
-- The JavaScript debugger is Visual Studio's existing JavaScript
-  debugger.
-- No custom debugger is involved.
+- `Bridge.cs` is regenerated on every C# build. Do not edit it
+  manually.
+- The JavaScript debugger is Visual Studio's built-in JavaScript/
+  TypeScript debugger. No custom debugger is involved.
+- F5 does not regenerate `Bridge.cs`. Bridge.cs is regenerated by
+  the C# build (either when you build the solution or when an
+  external C# project references `MyApp.Provider.csproj`).

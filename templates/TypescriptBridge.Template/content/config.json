@@ -3,8 +3,7 @@
     "className": "TypescriptProvider",
     "fieldName": "TypescriptCode"
   },
-  "typescript": {
-    "target": "es2020",
+  "bundle": {
     "format": "iife"
   },
   "release-minify": {

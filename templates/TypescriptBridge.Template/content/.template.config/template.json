@@ -9,8 +9,8 @@
   "shortName": "typescript-bridge",
   "sourceName": "TypescriptProject",
   "preferNameDirectory": true,
-  "defaultName": "TypescriptProject",
-  "description": "A TypescriptBridge project. Write TypeScript in ts/app.ts; consume it as a C# string field, or run it in a browser with full Visual Studio debugging.",
+  "defaultName": "MyApp",
+  "description": "A TypescriptBridge project. Write TypeScript in ts/app.ts and debug it in Visual Studio with full breakpoints. The compiled JavaScript is embedded into a C# readonly string field that other C# projects can consume.",
   "tags": {
     "type": "project"
   },

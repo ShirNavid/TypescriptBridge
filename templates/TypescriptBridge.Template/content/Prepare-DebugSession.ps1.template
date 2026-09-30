@@ -1,8 +1,9 @@
 # Prepare-DebugSession.ps1
 #
-# Reads config.json to extract run.port and run.browser, then rewrites
-# .vscode/launch.json from .vscode/launch.template.json with the port
-# and browser substituted.
+# Reads config.json to extract run.port and run.browser, generates a
+# fresh per-session browser profile directory, then rewrites
+# .vscode/launch.json from .vscode/launch.template.json with the port,
+# browser, and user data directory substituted.
 #
 # This script is invoked by the .esproj's PrepareDebugSession target
 # before every F5. Visual Studio re-reads launch.json on every F5
@@ -19,6 +20,7 @@ $ErrorActionPreference = 'Stop'
 $configPath = Join-Path $ProjectDir 'config.json'
 $templatePath = Join-Path $ProjectDir '.vscode\launch.template.json'
 $outputPath = Join-Path $ProjectDir '.vscode\launch.json'
+$profileRoot = Join-Path $ProjectDir 'obj\TypescriptBridge\browser-profile'
 
 if (-not (Test-Path $configPath)) {
     Write-Error "config.json not found: $configPath"
@@ -30,7 +32,12 @@ if (-not (Test-Path $templatePath)) {
     exit 1
 }
 
+# -----------------------------------------------------------------------------
+# Read config.json.
+# -----------------------------------------------------------------------------
+
 $config = Get-Content $configPath -Raw | ConvertFrom-Json
+
 $port = $config.run.port
 
 if ($null -eq $port -or $port -lt 1 -or $port -gt 65535) {
@@ -38,10 +45,49 @@ if ($null -eq $port -or $port -lt 1 -or $port -gt 65535) {
     exit 1
 }
 
+$browser = $config.run.browser
+
+if ($null -eq $browser -or ($browser -ne 'edge' -and $browser -ne 'chrome')) {
+    Write-Error "Invalid run.browser in config.json: $browser"
+    exit 1
+}
+
+# -----------------------------------------------------------------------------
+# Clean old browser profiles (best effort).
+# -----------------------------------------------------------------------------
+
+if (Test-Path $profileRoot) {
+    Get-ChildItem $profileRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+        try {
+            Remove-Item $_.FullName -Recurse -Force -ErrorAction Stop
+        } catch {
+            # The profile may be locked by a running browser. Ignore.
+        }
+    }
+} else {
+    New-Item -ItemType Directory -Path $profileRoot -Force | Out-Null
+}
+
+# -----------------------------------------------------------------------------
+# Create a unique per-session profile directory.
+# -----------------------------------------------------------------------------
+
+$stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
+$guid8 = [Guid]::NewGuid().ToString('N').Substring(0, 8)
+$profileName = "$stamp-$guid8"
+$profileDir = Join-Path $profileRoot $profileName
+
+New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
+
+# -----------------------------------------------------------------------------
+# Substitute tokens in launch.template.json.
+# -----------------------------------------------------------------------------
+
 $template = Get-Content $templatePath -Raw
 $template = $template.Replace('__TSB_PORT__', "$port")
-$template = $template.Replace('__TSB_BROWSER__', $config.run.browser)
+$template = $template.Replace('__TSB_BROWSER__', $browser)
+$template = $template.Replace('__TSB_USER_DATA_DIR__', $profileDir.Replace('\', '/'))
 
 Set-Content -Path $outputPath -Value $template -Encoding utf8
 
-Write-Host "TypescriptBridge: wrote launch.json (port=$port, browser=$($config.run.browser))"
+Write-Host "TypescriptBridge: wrote launch.json (port=$port, browser=$browser, profile=$profileName)"

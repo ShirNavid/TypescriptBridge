@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.6165494">
+
+  <PropertyGroup>
+    <ShouldRunNpmInstall>false</ShouldRunNpmInstall>
+    <ShouldRunBuildScript>false</ShouldRunBuildScript>
+    <StartupCommand>node "$(MSBuildProjectDirectory)\server.js" --f5</StartupCommand>
+
+    <!--
+      Disable all default JS SDK item globs. Only the developer-facing
+      files are surfaced through this project explicitly below.
+    -->
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+    <EnableDefaultTypeScriptConfigurationItems>false</EnableDefaultTypeScriptConfigurationItems>
+  </PropertyGroup>
+
+  <!--
+    Developer-facing files surfaced through this project.
+    These are the only files the developer sees in Solution Explorer.
+  -->
+  <ItemGroup>
+    <None Include="README.md" />
+    <None Include="config.json" />
+    <None Include="tsconfig.json" />
+    <None Include="ts\package.json" />
+    <None Include="ts\**\*.ts" Exclude="ts\default-definitions\**" />
+  </ItemGroup>
+
+  <!--
+    Before each debug session, regenerate .vscode/launch.json from
+    .vscode/launch.template.json using the port, browser, and user
+    data directory provided by Prepare-DebugSession.ps1.
+
+    Visual Studio re-reads launch.json on every F5, so changes take
+    effect on the next F5 without a VS restart.
+  -->
+  <Target Name="PrepareDebugSession" BeforeTargets="Build">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Prepare-DebugSession.ps1&quot; -ProjectDir &quot;$(MSBuildProjectDirectory)&quot;"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          ContinueOnError="false" />
+  </Target>
+
+</Project>
