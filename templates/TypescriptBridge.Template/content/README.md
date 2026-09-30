@@ -1,25 +1,63 @@
-# {ProjectName}
+# TypescriptProject
 
-Write TypeScript in `ts/app.ts`. On every build it is compiled into
-JavaScript and embedded into a C# readonly string field.
+A TypescriptBridge project.
 
-No Node.js or npm required.
+Write TypeScript in `ts/app.ts`. On every build it is compiled to
+JavaScript and embedded into a C# readonly string field
+(`TypescriptProvider.TypescriptCode`). The same project can be used
+as a C# library or run directly as a debugging host — with no
+configuration change.
 
-## Quick start
+## Two ways to use this project
 
-1. Write TypeScript in `ts/app.ts`.
-2. Run `dotnet build`.
-3. Use the generated C# field:
+### 1. As a library
+
+Reference this project from another C# project:
+
+    <ProjectReference Include="..\TypescriptProject\TypescriptProject.csproj" />
+
+Then use the compiled TypeScript in your C# code:
 
     string html = "<html><body><script>"
                 + TypescriptProvider.TypescriptCode
                 + "</script></body></html>";
 
-The generated file is `Bridge.cs`. Do not edit it manually.
+Program.cs is present in the assembly but is never invoked. There is
+no HTTP server, no browser, and no debug session in this mode.
+
+### 2. As an executable
+
+This project can run itself. When it runs, it starts a local HTTP
+server on loopback, serves the compiled JavaScript, and opens a
+browser so the TypeScript can be debugged directly.
+
+There are two ways to run it:
+
+#### F5 in Visual Studio
+
+1. Open `TypescriptProject.esproj` in Visual Studio 2026.
+2. Right-click `TypescriptProject.esproj` and select
+   **Set as Startup Project**.
+3. Set a breakpoint in `ts/app.ts`.
+4. Press **F5**.
+
+Visual Studio starts the C# host, opens the configured browser, and
+attaches the JavaScript debugger. Breakpoints in `ts/app.ts` are hit.
+
+#### Direct run
+
+    dotnet run
+
+The browser opens automatically. No debugger attaches.
+To debug manually, use:
+
+    Debug -> Attach to Process
+    Attach to: JavaScript and TypeScript (Chrome DevTools Protocol / V8 Inspector)
+    Select the browser process, click Attach.
 
 ## Configuration
 
-Optional. All settings have sensible defaults in `typescript-bridge.json`:
+`config.json`:
 
     {
       "output": {
@@ -30,70 +68,53 @@ Optional. All settings have sensible defaults in `typescript-bridge.json`:
         "target": "es2020",
         "format": "iife"
       },
-      "minify": {
+      "release-minify": {
         "level": "aggressive",
         "keepNames": true
+      },
+      "run": {
+        "browser": "edge",
+        "port": 45000
       }
     }
 
-### output
+### run.browser
 
-| Setting | Description | Default |
-| --- | --- | --- |
-| `className` | Generated C# static class name. | `TypescriptProvider` |
-| `fieldName` | Generated C# readonly string field name. | `TypescriptCode` |
+`edge` or `chrome`. Determines which browser is launched when the
+project runs as an executable. Ignored when the project is referenced
+as a library.
 
-Both values must be valid C# identifiers and must not be C# keywords.
+### run.port
 
-### typescript
+Port for the debug HTTP host. Must be reachable on loopback.
+Default: 45000.
 
-| Setting | Values | Default |
-| --- | --- | --- |
-| `target` | `es2015` ... `es2022`, `esnext` | `es2020` |
-| `format` | `iife`, `esm`, `cjs` | `iife` |
-
-### minify
-
-| Setting | Values | Default |
-| --- | --- | --- |
-| `level` | `off`, `light`, `full`, `aggressive` | `aggressive` |
-| `keepNames` | `true`, `false` | `true` |
-
-## BUILD_MODE
-
-The current build configuration is available as a global constant
-named `BUILD_MODE`:
-
-    Debug   -> "DEBUG"
-    Release -> "RELEASE"
-
-Use it in `ts/app.ts`:
-
-    if (BUILD_MODE === "DEBUG") {
-        console.log("Debug mode");
-    }
-
-`BUILD_MODE` is available everywhere in your TypeScript code, with full
-IntelliSense. Do not declare a variable with the same name.
+The generated `.vscode/launch.json` (used by F5) references this exact
+port. Changing it here is the only place you need to change it.
 
 ## Files
 
-- `{ProjectName}.csproj` — the .NET project file.
 - `ts/app.ts` — the TypeScript entry point.
-- `typescript-bridge.json` — optional configuration.
-- `Bridge.cs` — generated, do not edit.
-
-## IntelliSense
-
-Full IntelliSense for `typescript-bridge.json` is available out of the
-box in Visual Studio and VS Code. No setup is required.
+- `Program.cs` — the runtime host (runs only when the project is
+  executed).
+- `config.json` — configuration.
+- `TypescriptProject.esproj` — Visual Studio debug-launch project
+  used by F5.
+- `Prepare-DebugSession.ps1` — regenerates `.vscode/launch.json`
+  from the template on every build.
+- `.vscode/launch.template.json` — the source template for
+  `launch.json`; do not edit `launch.json` directly.
+- `Bridge.cs` — generated; do not edit.
 
 ## Requirements
 
 - .NET 8 SDK or later
+- Visual Studio 2026 for F5 debugging
+- Edge or Chrome (whichever is configured in `run.browser`)
 
 ## Notes
 
-- `Bridge.cs` is regenerated on every build and is not checked into
-  source control.
-- The TypeScript entry point is always `ts/app.ts`.
+- The C# host serves the compiled JavaScript over loopback HTTP.
+- The JavaScript debugger is Visual Studio's existing JavaScript
+  debugger.
+- No custom debugger is involved.

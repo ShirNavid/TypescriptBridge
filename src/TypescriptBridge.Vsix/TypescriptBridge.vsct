@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable"
+              xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!--
+    This file defines the commands contributed by the TypescriptBridge
+    extension and where they appear in the Visual Studio UI.
+  -->
+
+  <!-- Define the command set GUID. -->
+  <Extern href="stdidcmd.h"/>
+  <Extern href="vsshlids.h"/>
+
+  <Commands package="guidTypescriptBridgePackage">
+
+    <Groups>
+      <Group guid="guidTypescriptBridgeCmdSet" id="MyMenuGroup" priority="0x0600">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS"/>
+      </Group>
+    </Groups>
+
+    <Buttons>
+      <Button guid="guidTypescriptBridgeCmdSet"
+              id="cmdStartTypescriptDebugging"
+              priority="0x0100"
+              type="Button">
+        <Parent guid="guidTypescriptBridgeCmdSet" id="MyMenuGroup"/>
+        <Icon guid="guidImages" id="bmpPic1"/>
+        <Strings>
+          <ButtonText>Start TypeScript Debugging</ButtonText>
+        </Strings>
+      </Button>
+    </Buttons>
+
+  </Commands>
+
+  <Symbols>
+    <!-- Package GUID. Must match TypescriptBridgePackage.PackageGuidString. -->
+    <GuidSymbol name="guidTypescriptBridgePackage"
+                value="{b3b3f7a1-4f2e-4d6a-9c1a-2f7e5b8d9c3e}" />
+
+    <!-- Command set GUID. Must match StartTypescriptDebugCommand.CommandSetGuidString. -->
+    <GuidSymbol name="guidTypescriptBridgeCmdSet"
+                value="{c8a3d2e4-6f1b-4a7c-8d9e-5b2f3a1c7d4e}">
+      <IDSymbol name="MyMenuGroup" value="0x1020" />
+      <IDSymbol name="cmdStartTypescriptDebugging" value="0x0100" />
+    </GuidSymbol>
+
+    <!-- Icon GUID for button icons (using VS stock icons). -->
+    <GuidSymbol name="guidImages" value="{d4e5f6a7-8b9c-0d1e-2f3a-4b5c6d7e8f90}">
+      <IDSymbol name="bmpPic1" value="1" />
+    </GuidSymbol>
+  </Symbols>
+
+</CommandTable>

@@ -6,57 +6,109 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 
     <VSSDKBuildToolsAutoSetup>true</VSSDKBuildToolsAutoSetup>
     <VsixDeployOnDebug>false</VsixDeployOnDebug>
-    <GeneratePkgDefFile>false</GeneratePkgDefFile>
+    <GeneratePkgDefFile>true</GeneratePkgDefFile>
 
     <PackageId>TypescriptBridge.Vsix</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
     <Authors>ShirNavid</Authors>
-    <Description>Visual Studio extension for TypescriptBridge. Provides IntelliSense for typescript-bridge.json.</Description>
+    <Description>Visual Studio extension for TypescriptBridge. Provides IntelliSense for config.json.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-
-    <VSRoot>C:\Program Files\Microsoft Visual Studio\18\Community</VSRoot>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectCapability Include="CreateVsixContainer" />
   </ItemGroup>
 
+  <!--
+    The DebugHost library holds runtime glue (HTTP host, browser launcher,
+    Edge locator, port allocator, Job Object wrapper). It is a project
+    reference during development; it will be replaced with a PackageReference
+    in the final packaging architecture.
+  -->
   <ItemGroup>
-    <Compile Include="BridgeSchemaProvider.cs" />
-    <Compile Include="BridgeSchemaSelector.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    <ProjectReference Include="..\TypescriptBridge.DebugHost\TypescriptBridge.DebugHost.csproj" />
+  </ItemGroup>
+
+  <!--
+    BridgeSchemaProvider and BridgeSchemaSelector require
+    Microsoft.WebTools.Languages.Json, which is only available inside
+    a Visual Studio installation. They are removed from the default
+    compile set and re-added only when the reference can be resolved.
+  -->
+  <ItemGroup>
+    <Compile Remove="BridgeSchemaProvider.cs" />
+    <Compile Remove="BridgeSchemaSelector.cs" />
+    <Compile Include="BridgeSchemaProvider.cs"
+             Condition="'$(VsInstallRoot)' != '' AND Exists('$(VsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll')" />
+    <Compile Include="BridgeSchemaSelector.cs"
+             Condition="'$(VsInstallRoot)' != '' AND Exists('$(VsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll')" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" />
-    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.9.820" />
+    <VSCTCompile Include="TypescriptBridge.vsct">
+      <ResourceName>Menus.ctmenu</ResourceName>
+      <SubType>Designer</SubType>
+    </VSCTCompile>
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Microsoft.WebTools.Languages.Json">
-      <HintPath>$(VSRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll</HintPath>
+    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" ExcludeAssets="runtime" />
+    <PackageReference Include="System.ComponentModel.Composition" Version="9.0.0" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.5.38461" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Design" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="Microsoft.WebTools.Languages.Json"
+               Condition="'$(VsInstallRoot)' != '' AND Exists('$(VsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll')">
+      <HintPath>$(VsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll</HintPath>
       <Private>false</Private>
     </Reference>
+  </ItemGroup>
+
+  <!--
+    Ship the Tool and esbuild inside the VSIX so that the extension can
+    run a debug session without depending on a separate NuGet install
+    in the consuming project. The paths mirror what ToolRunner expects:
+      tools\net8.0\any\TypescriptBridge.Tool.dll
+      tools\esbuild\win-x64\esbuild.exe
+  -->
+  <ItemGroup>
+    <Content Include="..\TypescriptBridge.Tool\bin\$(Configuration)\net8.0\**\*"
+             Exclude="..\TypescriptBridge.Tool\bin\$(Configuration)\net8.0\**\*.pdb"
+             Link="tools\net8.0\any\%(RecursiveDir)%(Filename)%(Extension)">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <VSIXSubPath>tools\net8.0\any</VSIXSubPath>
+    </Content>
+
+    <Content Include="..\..\tools\esbuild\win-x64\esbuild.exe"
+             Link="tools\esbuild\win-x64\esbuild.exe">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <VSIXSubPath>tools\esbuild\win-x64</VSIXSubPath>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
-
-    <!--
-      Include the icon in the VSIX container so that the manifest
-      can reference it and the extension shows a proper icon in VS.
-    -->
     <None Include="icon.png"
           IncludeInVSIX="true"
           PackagePath="icon.png" />
   </ItemGroup>
 
 </Project>
+
+
+
+
+
+

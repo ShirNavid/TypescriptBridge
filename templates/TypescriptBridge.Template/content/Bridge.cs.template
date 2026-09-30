@@ -4,9 +4,32 @@
 
 public static class TypescriptProvider
 {
+    // DEBUG builds use the debug payload.
+    // RELEASE builds use the release payload.
     public static readonly string TypescriptCode =
+#if DEBUG
         """
-        (()=>{var n=Object.defineProperty;var r=(e,o)=>n(e,"name",{value:o,configurable:!0});console.log("TypescriptBridge: Debug mode");function l(e){return`Hello, ${e}!`}r(l,"greet");function t(e,o){return e+o}r(t,"add");console.log(l("TypescriptBridge"));console.log("2 + 3 =",t(2,3));})();
+        "use strict";
+        (() => {
+          // ts/app.ts
+          if (true) {
+            console.log("TypescriptBridge: Debug mode");
+          } else {
+            console.log("TypescriptBridge: Release mode");
+          }
+          function greet(name) {
+            return `Hello, ${name}!`;
+          }
+          function add(a, b) {
+            return a + b;
+          }
+          console.log(greet("TypescriptBridge"));
+          console.log("2 + 3 =", add(2, 3));
+        })();
         """;
+#else
+        """
+        "use strict";(()=>{var n=Object.defineProperty;var r=(e,o)=>n(e,"name",{value:o,configurable:!0});console.log("TypescriptBridge: Release mode");function l(e){return`Hello, ${e}!`}r(l,"greet");function t(e,o){return e+o}r(t,"add");console.log(l("TypescriptBridge"));console.log("2 + 3 =",t(2,3));})();
+        """;
+#endif
 }
-

@@ -1,6 +1,6 @@
 namespace TypescriptBridge.Tool;
 
-// Wraps the esbuild binary and translates TypeScriptConfig and MinifyConfig
+// Wraps the esbuild binary and translates TypeScriptConfig and ReleaseMinifyConfig
 // into the correct command line arguments.
 internal sealed class EsbuildRunner
 {
@@ -23,7 +23,7 @@ internal sealed class EsbuildRunner
         string entryPoint,
         string outputPath,
         TypeScriptConfig ts,
-        MinifyConfig minify,
+        ReleaseMinifyConfig releaseMinify,
         string buildMode,
         string workingDirectory)
     {
@@ -33,13 +33,56 @@ internal sealed class EsbuildRunner
             ts,
             buildMode);
 
-        AddMinifyArgs(args, minify);
+        AddMinifyArgs(args, releaseMinify, buildMode);
+
+        return Execute(args, workingDirectory);
+    }
+
+    // Runs esbuild for a debug session.
+    //
+    // This method produces JavaScript and a linked source map that
+    // Visual Studio's existing JavaScript/TypeScript debugger can
+    // consume through the .esproj project system.
+    //
+    // Differences from the normal Run method:
+    //   - BUILD_MODE is always "DEBUG"
+    //   - no minification is applied
+    //   - --keep-names is enabled
+    //   - a linked source map is produced
+    //   - sourcesContent is embedded in the map
+    public string RunDebug(
+        string entryPoint,
+        string outputPath,
+        TypeScriptConfig ts,
+        string workingDirectory)
+    {
+        var args = new List<string>
+        {
+            entryPoint,
+            "--bundle",
+            $"--format={ts.Format}",
+            $"--target={ts.Target}",
+            $"--outfile={outputPath}",
+
+            // Inject the debug build mode as a compile-time constant.
+            "--define:BUILD_MODE=\"DEBUG\"",
+
+            // Preserve function and class names for stack traces.
+            "--keep-names",
+
+            // Emit a linked source map.
+            "--sourcemap=linked",
+
+            // Embed the original TypeScript source in the map.
+            // This makes source availability robust.
+            "--sources-content=true",
+        };
 
         return Execute(args, workingDirectory);
     }
 
     // Builds the base esbuild argument list.
-    private static List<string> BuildArgs(
+    internal static List<string> BuildArgs(
         string entryPoint,
         string outputPath,
         TypeScriptConfig ts,
@@ -67,11 +110,12 @@ internal sealed class EsbuildRunner
     }
 
     // Adds minification flags according to the configured level.
-    private static void AddMinifyArgs(
+    internal static void AddMinifyArgs(
         List<string> args,
-        MinifyConfig minify)
+        ReleaseMinifyConfig releaseMinify,
+        string buildMode)
     {
-        switch (minify.Level)
+        switch (buildMode == "DEBUG" ? "off" : releaseMinify.Level)
         {
             case "off":
                 break;
@@ -88,7 +132,7 @@ internal sealed class EsbuildRunner
             case "aggressive":
                 args.Add("--minify");
 
-                if (minify.KeepNames)
+                if (releaseMinify.KeepNames)
                     args.Add("--keep-names");
 
                 break;
@@ -96,7 +140,7 @@ internal sealed class EsbuildRunner
             default:
                 throw new TypescriptBridgeException(
                     ErrorCodes.ConfigValidationFailed,
-                    $"minify.level: unknown value \"{minify.Level}\".");
+                    $"release-minify.level: unknown value \"{releaseMinify.Level}\".");
         }
     }
 
@@ -137,3 +181,7 @@ internal sealed class EsbuildRunner
         return result.StandardOutput;
     }
 }
+
+
+
+

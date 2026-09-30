@@ -2,13 +2,18 @@ using System.Text;
 
 namespace TypescriptBridge.Tool;
 
-// Generates a C# source file that embeds a JavaScript payload inside a
-// static readonly string field.
+// Generates a C# source file that embeds two JavaScript payloads
+// (debug and release) inside a single static readonly string field.
+// The C# compiler selects the appropriate payload at build time via
+// the #if DEBUG / #else / #endif preprocessor directives.
 internal static class CSharpGenerator
 {
-    // Produces the full C# source text for the given JavaScript payload and
-    // output configuration.
-    public static string Generate(string js, OutputConfig output)
+    // Produces the full C# source text for the given debug and release
+    // JavaScript payloads and output configuration.
+    public static string Generate(
+        string jsDebug,
+        string jsRelease,
+        OutputConfig output)
     {
         var sb = new StringBuilder();
 
@@ -23,10 +28,29 @@ internal static class CSharpGenerator
         sb.Append($"public static class {output.ClassName}").Append('\n');
         sb.Append('{').Append('\n');
 
-        // Emit the readonly field declaration.
+        // Emit an explanatory comment inside the class.
+        sb.Append("    // DEBUG builds use the debug payload.").Append('\n');
+        sb.Append("    // RELEASE builds use the release payload.").Append('\n');
+
+        // Open the field declaration.
         sb.Append($"    public static readonly string {output.FieldName} =").Append('\n');
-        AppendRawStringLiteral(sb, js, indent: "        ");
+
+        // Open the preprocessor block.
+        sb.Append("#if DEBUG").Append('\n');
+
+        // Emit the debug payload.
+        AppendRawStringLiteral(sb, jsDebug, indent: "        ");
         sb.Append(';').Append('\n');
+
+        // Switch to the release payload.
+        sb.Append("#else").Append('\n');
+
+        // Emit the release payload.
+        AppendRawStringLiteral(sb, jsRelease, indent: "        ");
+        sb.Append(';').Append('\n');
+
+        // Close the preprocessor block.
+        sb.Append("#endif").Append('\n');
 
         // Close the class. No trailing newline after the final brace.
         sb.Append('}');

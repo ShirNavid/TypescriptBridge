@@ -1,8 +1,0 @@
-{
-  "json.schemas": [
-    {
-      "fileMatch": [ "typescript-bridge.json" ],
-      "url": "../typescript-bridge.schema.json"
-    }
-  ]
-}

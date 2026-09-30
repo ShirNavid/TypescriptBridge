@@ -4,15 +4,46 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!--
+      OutputType is always Exe. The project is used as a library only
+      when another C# project references it; in that case the C#
+      compiler still produces the assembly, but Program.cs is never
+      invoked. This is intentional: there is no "library mode" and no
+      "executable mode" - the same project is consumed both ways.
+    -->
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="TypescriptBridge.Build" Version="1.0.1" />
+    <PackageReference Include="TypescriptBridge.DebugHost" Version="1.0.1" />
   </ItemGroup>
 
+  <!--
+    Hide internal infrastructure from Solution Explorer.
+    These files must exist on disk (Visual Studio and the tooling
+    reference them by path) but are not part of the developer-facing
+    project surface.
+  -->
   <ItemGroup>
-    <None Remove="typescript-bridge.schema.json" />
-    <None Include="typescript-bridge.schema.json" Visible="false" />
+    <None Remove="Program.cs" />
+    <None Include="Program.cs" Visible="false" />
+
+    <None Remove="config.schema.json" />
+    <None Include="config.schema.json" Visible="false" />
+
+    <None Remove="tsconfig.json" />
+    <None Include="tsconfig.json" Visible="false" />
+
+    <None Remove="Prepare-DebugSession.ps1" />
+    <None Include="Prepare-DebugSession.ps1" Visible="false" />
+
+    <None Remove=".vscode\**" />
+    <None Include=".vscode\**" Visible="false" />
+
+    <None Remove="ts\default-definitions\**" />
+    <None Include="ts\default-definitions\**" Visible="false" />
   </ItemGroup>
 
 </Project>

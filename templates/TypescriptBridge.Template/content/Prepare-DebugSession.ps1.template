@@ -1,0 +1,47 @@
+# Prepare-DebugSession.ps1
+#
+# Reads config.json to extract run.port and run.browser, then rewrites
+# .vscode/launch.json from .vscode/launch.template.json with the port
+# and browser substituted.
+#
+# This script is invoked by the .esproj's PrepareDebugSession target
+# before every F5. Visual Studio re-reads launch.json on every F5
+# (verified in C0-Report), so the substitution takes effect immediately.
+
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory = $true)]
+    [string] $ProjectDir
+)
+
+$ErrorActionPreference = 'Stop'
+
+$configPath = Join-Path $ProjectDir 'config.json'
+$templatePath = Join-Path $ProjectDir '.vscode\launch.template.json'
+$outputPath = Join-Path $ProjectDir '.vscode\launch.json'
+
+if (-not (Test-Path $configPath)) {
+    Write-Error "config.json not found: $configPath"
+    exit 1
+}
+
+if (-not (Test-Path $templatePath)) {
+    Write-Error "launch.template.json not found: $templatePath"
+    exit 1
+}
+
+$config = Get-Content $configPath -Raw | ConvertFrom-Json
+$port = $config.run.port
+
+if ($null -eq $port -or $port -lt 1 -or $port -gt 65535) {
+    Write-Error "Invalid run.port in config.json: $port"
+    exit 1
+}
+
+$template = Get-Content $templatePath -Raw
+$template = $template.Replace('__TSB_PORT__', "$port")
+$template = $template.Replace('__TSB_BROWSER__', $config.run.browser)
+
+Set-Content -Path $outputPath -Value $template -Encoding utf8
+
+Write-Host "TypescriptBridge: wrote launch.json (port=$port, browser=$($config.run.browser))"

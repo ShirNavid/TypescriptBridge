@@ -31,8 +31,8 @@ static int Run(string[] args)
         Console.WriteLine($"  field         = {config.Output.FieldName}");
         Console.WriteLine($"  target        = {config.TypeScript.Target}");
         Console.WriteLine($"  format        = {config.TypeScript.Format}");
-        Console.WriteLine($"  minify level  = {config.Minify.Level}");
-        Console.WriteLine($"  keepNames     = {config.Minify.KeepNames}");
+        Console.WriteLine($"  minify level  = {config.ReleaseMinify.Level}");
+        Console.WriteLine($"  keepNames     = {config.ReleaseMinify.KeepNames}");
         Console.WriteLine($"  configuration = {options.Configuration}");
 
         // Locate the esbuild binary using the standard lookup chain.
@@ -56,37 +56,64 @@ static int Run(string[] args)
         var intermediateDir = options.IntermediateOutputPath;
         Directory.CreateDirectory(intermediateDir);
 
-        // Normalize the build mode to upper case so that user code can
-        // always compare against "DEBUG" or "RELEASE" regardless of the
-        // casing used in MSBuild (Debug vs debug).
-        var buildMode = options.Configuration.ToUpperInvariant();
+        // Branch on the operation mode.
+        if (options.Mode == "debug")
+        {
+            var sessionDir = DebugSession.Run(
+                options,
+                config,
+                esbuildPath);
 
-        Console.WriteLine($"  build mode    = {buildMode}");
+            Console.WriteLine($"  session dir   = {sessionDir}");
 
-        // Path where esbuild writes the bundled JavaScript.
-        var jsPath = Path.Combine(
-            intermediateDir,
-            "typescript-bridge.js");
+            return 0;
+        }
 
-        // Run esbuild on the user's entry point. BUILD_MODE is injected
-        // via --define inside EsbuildRunner as a compile-time constant.
+        // Default: build mode.
+        // Two esbuild invocations are performed on every build:
+        //   - one with BUILD_MODE="DEBUG"
+        //   - one with BUILD_MODE="RELEASE"
+        // Both payloads are embedded in Bridge.cs and the C# compiler
+        // selects the appropriate payload via #if DEBUG / #else.
         var runner = new EsbuildRunner(esbuildPath);
+
+        // Debug payload.
+        var jsDebugPath = Path.Combine(
+            intermediateDir,
+            "typescript-bridge.debug.js");
 
         runner.Run(
             appEntryPoint,
-            jsPath,
+            jsDebugPath,
             config.TypeScript,
-            config.Minify,
-            buildMode,
+            config.ReleaseMinify,
+            "DEBUG",
             options.ProjectDirectory);
 
-        Console.WriteLine($"  javascript    = {jsPath}");
+        Console.WriteLine($"  debug js      = {jsDebugPath}");
 
-        // Read the bundled JavaScript and wrap it into a C# field.
-        var jsContent = File.ReadAllText(jsPath);
+        // Release payload.
+        var jsReleasePath = Path.Combine(
+            intermediateDir,
+            "typescript-bridge.release.js");
+
+        runner.Run(
+            appEntryPoint,
+            jsReleasePath,
+            config.TypeScript,
+            config.ReleaseMinify,
+            "RELEASE",
+            options.ProjectDirectory);
+
+        Console.WriteLine($"  release js    = {jsReleasePath}");
+
+        // Read both payloads and wrap them into a single C# field.
+        var jsDebugContent = File.ReadAllText(jsDebugPath);
+        var jsReleaseContent = File.ReadAllText(jsReleasePath);
 
         var csContent = CSharpGenerator.Generate(
-            jsContent,
+            jsDebugContent,
+            jsReleaseContent,
             config.Output);
 
         // Write Bridge.cs next to the project file, only if content changed.
@@ -131,7 +158,7 @@ static void WriteError(TypescriptBridgeException ex)
 // Holds all CLI options parsed from the command line.
 internal sealed class ToolOptions
 {
-    // Absolute path to typescript-bridge.json.
+    // Absolute path to config.json.
     public required string ConfigPath { get; init; }
 
     // Absolute path to the project directory containing ts/app.ts.
@@ -148,6 +175,21 @@ internal sealed class ToolOptions
     // still produce a deterministic BUILD_MODE value.
     public string Configuration { get; init; } = "Debug";
 
+    // Operation mode.
+    // "build"  -> normal Bridge.cs generation (default).
+    // "debug"  -> debug session artifacts (js, map, html, server, esproj).
+    public string Mode { get; init; } = "build";
+
+    // Session id for debug mode. Required when Mode == "debug".
+    public string? SessionId { get; init; }
+
+    // Root directory for debug session artifacts.
+    // Required when Mode == "debug".
+    public string? DebugOutputRoot { get; init; }
+
+    // Port for the local HTTP debug host. Required when Mode == "debug".
+    public int Port { get; init; }
+
     // Parses the command line arguments into a ToolOptions instance.
     public static ToolOptions Parse(string[] args)
     {
@@ -156,6 +198,10 @@ internal sealed class ToolOptions
         string? intermediate = null;
         string? esbuildPath = null;
         string? configuration = null;
+        string? mode = null;
+        string? sessionId = null;
+        string? debugOutput = null;
+        int port = 0;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -194,6 +240,41 @@ internal sealed class ToolOptions
                         args,
                         ref i,
                         "--configuration");
+                    break;
+
+                case "--mode":
+                    mode = RequireValue(
+                        args,
+                        ref i,
+                        "--mode");
+                    break;
+
+                case "--session":
+                    sessionId = RequireValue(
+                        args,
+                        ref i,
+                        "--session");
+                    break;
+
+                case "--debug-output":
+                    debugOutput = RequireValue(
+                        args,
+                        ref i,
+                        "--debug-output");
+                    break;
+
+                case "--port":
+                    var portValue = RequireValue(
+                        args,
+                        ref i,
+                        "--port");
+
+                    if (!int.TryParse(portValue, out port) || port < 1 || port > 65535)
+                    {
+                        throw new TypescriptBridgeException(
+                            ErrorCodes.General,
+                            $"Invalid --port value: {portValue}");
+                    }
                     break;
 
                 case "--help":
@@ -238,6 +319,46 @@ internal sealed class ToolOptions
             configuration = "Debug";
         }
 
+        // Default mode is "build".
+        if (string.IsNullOrWhiteSpace(mode))
+        {
+            mode = "build";
+        }
+
+        mode = mode.ToLowerInvariant();
+
+        if (mode != "build" && mode != "debug")
+        {
+            throw new TypescriptBridgeException(
+                ErrorCodes.General,
+                $"Invalid --mode value: {mode}. Expected 'build' or 'debug'.");
+        }
+
+        // Validate debug-mode requirements.
+        if (mode == "debug")
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                throw new TypescriptBridgeException(
+                    ErrorCodes.General,
+                    "Missing required argument for debug mode: --session");
+            }
+
+            if (string.IsNullOrWhiteSpace(debugOutput))
+            {
+                throw new TypescriptBridgeException(
+                    ErrorCodes.General,
+                    "Missing required argument for debug mode: --debug-output");
+            }
+
+            if (port == 0)
+            {
+                throw new TypescriptBridgeException(
+                    ErrorCodes.General,
+                    "Missing required argument for debug mode: --port");
+            }
+        }
+
         return new ToolOptions
         {
             ConfigPath = Path.GetFullPath(configPath),
@@ -245,6 +366,10 @@ internal sealed class ToolOptions
             IntermediateOutputPath = Path.GetFullPath(intermediate, Path.GetFullPath(projectDir)),
             EsbuildPath = esbuildPath,
             Configuration = configuration,
+            Mode = mode,
+            SessionId = sessionId,
+            DebugOutputRoot = debugOutput is null ? null : Path.GetFullPath(debugOutput),
+            Port = port,
         };
     }
 
@@ -274,5 +399,15 @@ internal sealed class ToolOptions
         Console.WriteLine("Usage:");
         Console.WriteLine(
             "  TypescriptBridge.Tool --config <path> --project <path> --intermediate <path> [--esbuild <path>] [--configuration <name>]");
+        Console.WriteLine();
+        Console.WriteLine("Debug session mode:");
+        Console.WriteLine(
+            "  TypescriptBridge.Tool --config <path> --project <path> --intermediate <path> --mode debug --session <id> --debug-output <path> --port <n> [--esbuild <path>]");
     }
 }
+
+
+
+
+
+

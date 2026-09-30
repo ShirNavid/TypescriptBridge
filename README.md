@@ -38,7 +38,7 @@ Optional. All settings have sensible defaults:
         "target": "es2020",
         "format": "iife"
       },
-      "minify": {
+      "release-minify": {
         "level": "aggressive",
         "keepNames": true
       }
@@ -60,7 +60,7 @@ Both values must be valid C# identifiers and must not be C# keywords.
 | `target` | `es2015` ... `es2022`, `esnext` | `es2020` |
 | `format` | `iife`, `esm`, `cjs` | `iife` |
 
-### minify
+### release-minify
 
 | Setting | Values | Default |
 | --- | --- | --- |
@@ -86,15 +86,16 @@ IntelliSense. Do not declare a variable with the same name.
 
 ## Files
 
-- `{ProjectName}.csproj` — the .NET project file.
 - `ts/app.ts` — the TypeScript entry point.
-- `typescript-bridge.json` — optional configuration.
+- `tsconfig.json` — TypeScript language service configuration.
+- `config.json` — optional configuration.
+- `ts/default-definitions/typescript-bridge.d.ts` — declares `BUILD_MODE` for the TypeScript language service.
 - `Bridge.cs` — generated, do not edit.
 
 ## IntelliSense
 
-Full IntelliSense for `typescript-bridge.json` is available out of the
-box in Visual Studio and VS Code. No setup is required.
+Full IntelliSense for `config.json` is available out of the box in
+Visual Studio. No setup is required.
 
 ## Requirements
 
@@ -105,3 +106,9 @@ box in Visual Studio and VS Code. No setup is required.
 - `Bridge.cs` is regenerated on every build and is not checked into
   source control.
 - The TypeScript entry point is always `ts/app.ts`.
+- `Bridge.cs` contains two JavaScript payloads (debug and release).
+  The C# compiler selects the appropriate payload at build time
+  via `#if DEBUG`.
+
+
+

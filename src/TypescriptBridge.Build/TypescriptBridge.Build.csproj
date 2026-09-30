@@ -8,7 +8,6 @@
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 
     <PackageId>TypescriptBridge.Build</PackageId>
-    <Version>1.0.0</Version>
     <Authors>ShirNavid</Authors>
     <Description>MSBuild integration for TypescriptBridge. Compiles TypeScript into C# readonly fields at build time, with full JSON Schema-based IntelliSense and validation.</Description>
     <PackageTags>typescript;msbuild;build;codegen;schema;esbuild</PackageTags>
@@ -27,9 +26,9 @@
           Pack="true"
           PackagePath="build\TypescriptBridge.Build.targets" />
 
-    <None Include="schema\typescript-bridge.schema.json"
+    <None Include="schema\config.schema.json"
           Pack="true"
-          PackagePath="tools\schema\typescript-bridge.schema.json" />
+          PackagePath="tools\schema\config.schema.json" />
 
     <None Include="..\TypescriptBridge.Tool\bin\$(Configuration)\net8.0\**\*"
           Pack="true"
@@ -50,4 +49,7 @@
   </ItemGroup>
 
 </Project>
+
+
+
 

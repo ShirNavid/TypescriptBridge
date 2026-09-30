@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="TypescriptProject.csproj" />
+  <Project Path="TypescriptProject.Debug.esproj" />
+</Solution>

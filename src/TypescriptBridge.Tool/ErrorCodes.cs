@@ -9,10 +9,10 @@ public static class ErrorCodes
     // Unexpected internal error with no more specific code.
     public const string General = "TS_HANDLER0001";
 
-    // The typescript-bridge.json file could not be parsed as JSON.
+    // The config.json file could not be parsed as JSON.
     public const string ConfigInvalidJson = "TS_HANDLER0002";
 
-    // The typescript-bridge.json file parsed but failed schema validation.
+    // The config.json file parsed but failed schema validation.
     public const string ConfigValidationFailed = "TS_HANDLER0003";
 
     // The ts/app.ts entry point was not found in the project directory.
@@ -51,3 +51,4 @@ public sealed class TypescriptBridgeException : Exception
         ExitCode = exitCode;
     }
 }
+

@@ -2,7 +2,7 @@ using TypescriptBridge.Tool;
 
 namespace TypescriptBridge.IntegrationTests;
 
-// Tests for Config.Load, which reads typescript-bridge.json, validates it
+// Tests for Config.Load, which reads config.json, validates it
 // against the schema, and deserializes it into a Config object.
 public sealed class ConfigTests : IDisposable
 {
@@ -28,7 +28,7 @@ public sealed class ConfigTests : IDisposable
     // Writes a config file into the temp directory and returns its path.
     private string WriteConfig(string content)
     {
-        var path = Path.Combine(_tempDir, "typescript-bridge.json");
+        var path = Path.Combine(_tempDir, "config.json");
         File.WriteAllText(path, content);
         return path;
     }
@@ -47,7 +47,7 @@ public sealed class ConfigTests : IDisposable
                 "target": "es2022",
                 "format": "esm"
               },
-              "minify": {
+              "release-minify": {
                 "level": "full",
                 "keepNames": false
               }
@@ -60,8 +60,8 @@ public sealed class ConfigTests : IDisposable
         Assert.Equal("MyCode", config.Output.FieldName);
         Assert.Equal("es2022", config.TypeScript.Target);
         Assert.Equal("esm", config.TypeScript.Format);
-        Assert.Equal("full", config.Minify.Level);
-        Assert.False(config.Minify.KeepNames);
+        Assert.Equal("full", config.ReleaseMinify.Level);
+        Assert.False(config.ReleaseMinify.KeepNames);
     }
 
     // Verifies that an empty object applies all defaults.
@@ -76,8 +76,8 @@ public sealed class ConfigTests : IDisposable
         Assert.Equal("TypescriptCode", config.Output.FieldName);
         Assert.Equal("es2020", config.TypeScript.Target);
         Assert.Equal("iife", config.TypeScript.Format);
-        Assert.Equal("aggressive", config.Minify.Level);
-        Assert.True(config.Minify.KeepNames);
+        Assert.Equal("aggressive", config.ReleaseMinify.Level);
+        Assert.True(config.ReleaseMinify.KeepNames);
     }
 
     // Verifies that comments in the JSON file are ignored.
@@ -163,4 +163,121 @@ public sealed class ConfigTests : IDisposable
 
         Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
     }
+
+    // -------------------------------------------------------------------------
+    // Run section tests (secondary vision).
+    // -------------------------------------------------------------------------
+
+    // Defaults: an empty config must yield edge browser and port 45000.
+    [Fact]
+    public void Load_UsesDefaultRunConfig()
+    {
+        var path = WriteConfig("{}");
+
+        var config = Config.Load(path);
+
+        Assert.Equal("edge", config.Run.Browser);
+        Assert.Equal(45000, config.Run.Port);
+    }
+
+
+    // Explicit edge browser is accepted.
+    [Fact]
+    public void Load_ReadsEdgeBrowser()
+    {
+        var path = WriteConfig("""
+            {
+              "run": {
+                "browser": "edge"
+              }
+            }
+            """);
+
+        var config = Config.Load(path);
+
+        Assert.Equal("edge", config.Run.Browser);
+    }
+
+    // Chrome is accepted.
+    [Fact]
+    public void Load_ReadsChromeBrowser()
+    {
+        var path = WriteConfig("""
+            {
+              "run": {
+                "browser": "chrome"
+              }
+            }
+            """);
+
+        var config = Config.Load(path);
+
+        Assert.Equal("chrome", config.Run.Browser);
+    }
+
+
+    // Unknown browser rejected.
+    [Fact]
+    public void Load_RejectsUnknownBrowser()
+    {
+        var path = WriteConfig("""{ "run": { "browser": "firefox" } }""");
+
+        var exception = Assert.Throws<TypescriptBridgeException>(
+            () => Config.Load(path));
+
+        Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
+        Assert.Contains("firefox", exception.Message);
+    }
+
+    // Unknown property inside run rejected.
+    [Fact]
+    public void Load_RejectsUnknownRunProperty()
+    {
+        var path = WriteConfig("""{ "run": { "unknownSetting": true } }""");
+
+        var exception = Assert.Throws<TypescriptBridgeException>(
+            () => Config.Load(path));
+
+        Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
+    }
+
+    // Valid port is accepted.
+    [Fact]
+    public void Load_ReadsRunPort()
+    {
+        var path = WriteConfig("""{ "run": { "port": 45678 } }""");
+
+        var config = Config.Load(path);
+
+        Assert.Equal(45678, config.Run.Port);
+    }
+
+    // Port out of range rejected.
+    [Fact]
+    public void Load_RejectsOutOfRangePort()
+    {
+        var path = WriteConfig("""{ "run": { "port": 99999 } }""");
+
+        var exception = Assert.Throws<TypescriptBridgeException>(
+            () => Config.Load(path));
+
+        Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
+    }
+
+    // Port of wrong type rejected.
+    [Fact]
+    public void Load_RejectsNonNumericPort()
+    {
+        var path = WriteConfig("""{ "run": { "port": "8080" } }""");
+
+        var exception = Assert.Throws<TypescriptBridgeException>(
+            () => Config.Load(path));
+
+        Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
+    }
 }
+
+
+
+
+

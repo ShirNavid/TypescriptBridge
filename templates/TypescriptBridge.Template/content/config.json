@@ -7,8 +7,12 @@
     "target": "es2020",
     "format": "iife"
   },
-  "minify": {
+  "release-minify": {
     "level": "aggressive",
     "keepNames": true
+  },
+  "run": {
+    "browser": "edge",
+    "port": 45000
   }
 }

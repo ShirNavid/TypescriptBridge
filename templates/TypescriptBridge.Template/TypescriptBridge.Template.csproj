@@ -8,9 +8,8 @@
     <NoWarn>$(NoWarn);NU5128</NoWarn>
 
     <PackageId>TypescriptBridge.Template</PackageId>
-    <Version>1.0.0</Version>
     <Authors>ShirNavid</Authors>
-    <Description>Template for creating TypescriptBridge projects. Includes JSON Schema for full IntelliSense and validation of typescript-bridge.json.</Description>
+    <Description>Template for creating TypescriptBridge projects. Includes JSON Schema for full IntelliSense and validation of config.json.</Description>
     <PackageTags>dotnet-new;templates;typescript;codegen;schema</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/ShirNavid/TypescriptBridge</PackageProjectUrl>
@@ -24,9 +23,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!--
+      Pack the entire content folder.
+      The .slnx extension is excluded by the default MSBuild item
+      rules for Solution files, so it is packed explicitly below.
+    -->
     <Content Include="content\**\*"
              Exclude="content\**\bin\**;content\**\obj\**;content\**\.vs\**"
              PackagePath="content\%(RecursiveDir)%(Filename)%(Extension)" />
+
+
     <Compile Remove="**\*" />
   </ItemGroup>
 

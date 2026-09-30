@@ -28,7 +28,7 @@ public sealed class SchemaValidatorTests
                 "target": "es2020",
                 "format": "iife"
               },
-              "minify": {
+              "release-minify": {
                 "level": "aggressive",
                 "keepNames": true
               }
@@ -105,7 +105,7 @@ public sealed class SchemaValidatorTests
     [Fact]
     public void Validate_RejectsUnknownMinifyLevel()
     {
-        var json = """{ "minify": { "level": "extreme" } }""";
+        var json = """{ "release-minify": { "level": "extreme" } }""";
 
         var exception = Assert.Throws<TypescriptBridgeException>(
             () => SchemaValidator.Validate(Parse(json)));
@@ -118,7 +118,7 @@ public sealed class SchemaValidatorTests
     [Fact]
     public void Validate_RejectsNonBooleanKeepNames()
     {
-        var json = """{ "minify": { "keepNames": "yes" } }""";
+        var json = """{ "release-minify": { "keepNames": "yes" } }""";
 
         var exception = Assert.Throws<TypescriptBridgeException>(
             () => SchemaValidator.Validate(Parse(json)));
@@ -185,4 +185,47 @@ public sealed class SchemaValidatorTests
 
         Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
     }
+
+    // -------------------------------------------------------------------------
+    // Cross-copy invariant: the two shipped schema copies must be identical.
+    // -------------------------------------------------------------------------
+
+    // The repository ships config.schema.json in two places:
+    //   src\TypescriptBridge.Build\schema\config.schema.json
+    //   templates\TypescriptBridge.Template\content\config.schema.json
+    // They must stay byte-identical so that VS IntelliSense and the Tool
+    // validator agree.
+    [Fact]
+    public void Schemas_AreIdentical()
+    {
+        // Locate the repository root by walking up from the test assembly.
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        DirectoryInfo? root = null;
+        for (int depth = 0; depth < 10 && dir is not null; depth++)
+        {
+            if (File.Exists(Path.Combine(dir.FullName, "TypescriptBridge.slnx")))
+            {
+                root = dir;
+                break;
+            }
+            dir = dir.Parent;
+        }
+
+        Assert.NotNull(root);
+
+        var schemaA = Path.Combine(root!.FullName,
+            "src", "TypescriptBridge.Build", "schema", "config.schema.json");
+        var schemaB = Path.Combine(root.FullName,
+            "templates", "TypescriptBridge.Template", "content", "config.schema.json");
+
+        Assert.True(File.Exists(schemaA), $"Missing: {schemaA}");
+        Assert.True(File.Exists(schemaB), $"Missing: {schemaB}");
+
+        var contentA = File.ReadAllText(schemaA);
+        var contentB = File.ReadAllText(schemaB);
+
+        Assert.Equal(contentA, contentB);
+    }
 }
+
+

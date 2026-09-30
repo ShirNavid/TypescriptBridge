@@ -5,5 +5,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Single source of truth for the version across all packages. -->
+    <Version>1.0.1</Version>
+    <Authors>ShirNavid</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/ShirNavid/TypescriptBridge</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ShirNavid/TypescriptBridge</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 </Project>

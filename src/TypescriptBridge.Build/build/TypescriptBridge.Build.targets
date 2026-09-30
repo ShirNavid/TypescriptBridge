@@ -1,65 +1,115 @@
 <Project>
 
   <!--
-    TypescriptBridge MSBuild integration.
+    TypescriptBridge.Build.targets
 
-    This file is imported automatically by consuming projects via the
-    TypescriptBridge.Build NuGet package. It hooks a target before
-    CoreCompile so that the tool runs before the C# compiler sees
-    Bridge.cs.
+    This file is packed into the TypescriptBridge.Build NuGet package
+    and is automatically imported by NuGet into any project that
+    references the package.
+
+    Responsibility:
+      Run the TypescriptBridge.Tool at build time to produce Bridge.cs
+      from the user's ts/app.ts, before the C# compiler runs.
+
+    Contract with the Tool (see Program.cs in TypescriptBridge.Tool):
+      config path          required
+      project path         required
+      intermediate path    required
+      esbuild path         optional
+      configuration name   optional (defaults to "Debug")
   -->
 
   <PropertyGroup>
-    <!-- Path to the tool assembly inside the package. -->
-    <TypescriptBridgeToolPath Condition="'$(TypescriptBridgeToolPath)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\net8.0\any\TypescriptBridge.Tool.dll'))</TypescriptBridgeToolPath>
+    <!-- Allow the consumer to override the tool location if needed. -->
+    <TypescriptBridgeToolPath Condition="'$(TypescriptBridgeToolPath)' == ''">$(MSBuildThisFileDirectory)..\tools\net8.0\any\TypescriptBridge.Tool.dll</TypescriptBridgeToolPath>
 
-    <!-- Preferred dotnet host, falling back to dotnet on PATH. -->
-    <TypescriptBridgeDotnetExe Condition="'$(TypescriptBridgeDotnetExe)' == '' AND '$(DOTNET_HOST_PATH)' != ''">$(DOTNET_HOST_PATH)</TypescriptBridgeDotnetExe>
-    <TypescriptBridgeDotnetExe Condition="'$(TypescriptBridgeDotnetExe)' == ''">dotnet</TypescriptBridgeDotnetExe>
+    <!-- Path to the user's config.json inside the consuming project. -->
+    <TypescriptBridgeConfigPath Condition="'$(TypescriptBridgeConfigPath)' == ''">$(MSBuildProjectDirectory)\config.json</TypescriptBridgeConfigPath>
 
-    <!-- Directory containing the esbuild binaries. -->
-    <TypescriptBridgeEsbuildDir Condition="'$(TypescriptBridgeEsbuildDir)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\tools\esbuild'))</TypescriptBridgeEsbuildDir>
+    <!-- Intermediate directory for the tool's scratch files. -->
+    <TypescriptBridgeIntermediatePath Condition="'$(TypescriptBridgeIntermediatePath)' == ''">$(BaseIntermediateOutputPath)TypescriptBridge</TypescriptBridgeIntermediatePath>
 
-    <!-- Path to typescript-bridge.json inside the consuming project. -->
-    <TypescriptBridgeConfigPath Condition="'$(TypescriptBridgeConfigPath)' == ''">$(MSBuildProjectDirectory)\typescript-bridge.json</TypescriptBridgeConfigPath>
+    <!-- Location of the esbuild binary shipped with the package. -->
+    <TypescriptBridgeEsbuildPath Condition="'$(TypescriptBridgeEsbuildPath)' == ''">$(MSBuildThisFileDirectory)..\tools\esbuild\win-x64\esbuild.exe</TypescriptBridgeEsbuildPath>
 
-    <!-- Intermediate output directory for tool artifacts. -->
-    <TypescriptBridgeIntermediateOutputPath Condition="'$(TypescriptBridgeIntermediateOutputPath)' == ''">$(MSBuildProjectDirectory)\$(IntermediateOutputPath)TypescriptBridge</TypescriptBridgeIntermediateOutputPath>
-
-    <!-- Global switch to disable the bridge during a build. -->
-    <TypescriptBridgeEnabled Condition="'$(TypescriptBridgeEnabled)' == ''">true</TypescriptBridgeEnabled>
+    <!--
+      Normalize trailing separators so that the value can be safely
+      embedded inside quotes on the command line. A trailing backslash
+      would escape the closing quote and corrupt the next argument.
+    -->
+    <TypescriptBridgeIntermediatePath>$(TypescriptBridgeIntermediatePath.TrimEnd('\'))</TypescriptBridgeIntermediatePath>
   </PropertyGroup>
 
+  <!--
+    Run the tool before the C# compiler. The generated Bridge.cs is picked
+    up by the default Compile glob on the next build, and by the current
+    build because we explicitly register it as a Compile item afterwards.
+  -->
   <Target Name="TypescriptBridgeGenerate"
-          BeforeTargets="CoreCompile"
-          Condition="'$(TypescriptBridgeEnabled)' == 'true' AND '$(DesignTimeBuild)' != 'true'">
+          BeforeTargets="BeforeCompile;CoreCompile"
+          Inputs="$(MSBuildProjectDirectory)\ts\app.ts;$(TypescriptBridgeConfigPath)"
+          Outputs="$(MSBuildProjectDirectory)\Bridge.cs">
 
-    <Message Text="TypescriptBridge: running tool..." Importance="normal" />
+    <Message Importance="high" Text="TypescriptBridge: generating Bridge.cs from ts/app.ts" />
 
-    <MakeDir Directories="$(TypescriptBridgeIntermediateOutputPath)" />
+    <MakeDir Directories="$(TypescriptBridgeIntermediatePath)" />
+
+    <Exec Command="dotnet exec &quot;$(TypescriptBridgeToolPath)&quot; --config &quot;$(TypescriptBridgeConfigPath)&quot; --project &quot;$(MSBuildProjectDirectory)&quot; --intermediate &quot;$(TypescriptBridgeIntermediatePath)&quot; --configuration &quot;$(Configuration)&quot; --esbuild &quot;$(TypescriptBridgeEsbuildPath)&quot;"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          ContinueOnError="false" />
+
+    <!--
+      The generated Bridge.cs is normally picked up by the SDK's default
+      Compile glob. Registering it as FileWrites ensures that incremental
+      builds and clean know about it.
+    -->
+    <ItemGroup>
+      <FileWrites Include="$(MSBuildProjectDirectory)\Bridge.cs" />
+    </ItemGroup>
+
+  </Target>
+
+  <!--
+    Copy the Tool payload and esbuild into the consuming executable's
+    output directory. This runs only for executable projects
+    (OutputType == Exe). Library mode does not need the runtime payload.
+
+    The copied layout matches what the generated Program.cs expects:
+      $(OutDir)\tools\net8.0\any\
+      $(OutDir)\tools\esbuild\win-x64\
+  -->
+  <Target Name="TypescriptBridgeCopyRuntime"
+          AfterTargets="Build"
+          Condition="'$(OutputType)' == 'Exe'">
 
     <PropertyGroup>
-      <!-- esbuild binary for the current platform. -->
-      <TypescriptBridgeEsbuildBin>$(TypescriptBridgeEsbuildDir)\win-x64\esbuild.exe</TypescriptBridgeEsbuildBin>
-
-      <!--
-        Full command line for the tool.
-
-        The configuration is forwarded from MSBuild's $(Configuration)
-        property so the tool can inject the correct BUILD_MODE constant
-        into the JavaScript output.
-      -->
-      <TypescriptBridgeCommand>&quot;$(TypescriptBridgeDotnetExe)&quot; exec &quot;$(TypescriptBridgeToolPath)&quot; --config &quot;$(TypescriptBridgeConfigPath)&quot; --project &quot;$(MSBuildProjectDirectory)&quot; --intermediate &quot;$(TypescriptBridgeIntermediateOutputPath)&quot; --esbuild &quot;$(TypescriptBridgeEsbuildBin)&quot; --configuration &quot;$(Configuration)&quot;</TypescriptBridgeCommand>
+      <_TSBToolRoot>$(MSBuildThisFileDirectory)..\tools\net8.0\any\</_TSBToolRoot>
+      <_TSBEsbuildRoot>$(MSBuildThisFileDirectory)..\tools\esbuild\win-x64\</_TSBEsbuildRoot>
+      <_TSBOutToolDir>$(OutDir)tools\net8.0\any\</_TSBOutToolDir>
+      <_TSBOutEsbuildDir>$(OutDir)tools\esbuild\win-x64\</_TSBOutEsbuildDir>
     </PropertyGroup>
 
-    <Exec Command="$(TypescriptBridgeCommand)"
-          ConsoleToMSBuild="true"
-          ContinueOnError="false">
-      <Output TaskParameter="ConsoleOutput" ItemName="TypescriptBridgeOutput" />
-      <Output TaskParameter="ExitCode" PropertyName="TypescriptBridgeExitCode" />
-    </Exec>
+    <ItemGroup>
+      <_TSBToolFiles Include="$(_TSBToolRoot)**\*" />
+      <_TSBEsbuildFiles Include="$(_TSBEsbuildRoot)*" />
+    </ItemGroup>
 
-    <Message Text="%(TypescriptBridgeOutput.Identity)" Importance="normal" />
+    <MakeDir Directories="$(_TSBOutToolDir);$(_TSBOutEsbuildDir)" />
+
+    <Copy SourceFiles="@(_TSBToolFiles)"
+          DestinationFiles="@(_TSBToolFiles->'$(_TSBOutToolDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+
+    <Copy SourceFiles="@(_TSBEsbuildFiles)"
+          DestinationFiles="@(_TSBEsbuildFiles->'$(_TSBOutEsbuildDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+
+    <Message Importance="high"
+             Text="TypescriptBridge: copied runtime payload to $(_TSBOutToolDir) and $(_TSBOutEsbuildDir)" />
   </Target>
 
 </Project>
+
+
+
+

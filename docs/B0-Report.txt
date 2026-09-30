@@ -1,0 +1,92 @@
+================================================================================
+B0 — INVESTIGATION REPORT (SUMMARY)
+================================================================================
+
+Date: 2026-09-29
+Status: COMPLETE
+
+RESULT: The full TypeScript debugging chain works in Visual Studio 2026
+without any custom debugger, using the existing Visual Studio JavaScript/
+TypeScript debugger and the JavaScript Project System (.esproj).
+
+CONFIRMED WORKING CHAIN:
+
+    ts/app.ts
+       | esbuild (--sourcemap=linked --sources-content=true)
+       v
+    app.js + app.js.map
+       | HTTP server (Node.js, no dependencies)
+       v
+    http://127.0.0.1:<port>/
+       | Edge
+       v
+    CDP / V8 Inspector
+       | .esproj + .vscode/launch.json
+       v
+    VS JavaScript/TypeScript debugger
+       | source map
+       v
+    ts/app.ts breakpoint hit
+
+VERIFIED FEATURES:
+
+    Breakpoint in .ts source         OK
+    Locals window                     OK
+    F10 (Step Over)                   OK
+    F11 (Step Into)                   OK
+    F5 (Continue)                     OK
+    Call Stack                        OK
+
+REQUIRED FILES (per debug session):
+
+    1. .esproj
+        <Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.6165494">
+          <PropertyGroup>
+            <ShouldRunNpmInstall>false</ShouldRunNpmInstall>
+            <ShouldRunBuildScript>false</ShouldRunBuildScript>
+            <StartupCommand>node "$(MSBuildProjectDirectory)\server.js"</StartupCommand>
+          </PropertyGroup>
+        </Project>
+
+    2. .vscode/launch.json
+        {
+          "version": "0.2.0",
+          "configurations": [
+            {
+              "name": "localhost (Edge)",
+              "type": "edge",
+              "request": "launch",
+              "url": "http://127.0.0.1:<port>/index.html",
+              "webRoot": "${workspaceFolder}"
+            }
+          ]
+        }
+
+    3. server.js       -- simple Node.js HTTP static server on loopback
+    4. index.html      -- loads app.js
+    5. app.js + map    -- produced by esbuild with sourcesContent
+
+KEY ARCHITECTURAL FINDINGS:
+
+    - HTTP transport is required. file:// does not work with the VS
+      debug adapter, even though Edge DevTools handles it fine.
+    - .esproj is required. Open Folder mode does not work for
+      TypeScript debugging with source maps in VS 2026.
+    - launch.json must be in .vscode/ and is read only inside an
+      .esproj project.
+    - StartupCommand in .esproj is a command to run, NOT a URL.
+    - Node.js alone is sufficient for the HTTP server. No npm
+      dependencies, no package.json, no third-party server.
+    - The .esproj SDK version must match the installed VS SDK exactly
+      (1.0.6165494 on this machine).
+
+NOT VERIFIED (not required for MVP):
+
+    - Nested TypeScript files (ts/foo/bar.ts) in the same bundle.
+    - ESM output format.
+    - Chrome as an alternative browser.
+    - Automatic debugger attach without launch.json.
+
+================================================================================
+END OF B0 REPORT
+================================================================================

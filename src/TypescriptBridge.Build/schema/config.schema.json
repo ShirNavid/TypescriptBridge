@@ -57,7 +57,7 @@
         }
       }
     },
-    "minify": {
+    "release-minify": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -78,6 +78,33 @@
           "default": true
         }
       }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Runtime host configuration. Applied when the project is executed.",
+      "properties": {
+        "browser": {
+          "type": "string",
+          "description": "Browser used by the runtime host.",
+          "enum": [
+            "edge",
+            "chrome"
+          ],
+          "default": "edge"
+        },
+        "port": {
+          "type": "integer",
+          "description": "Port for the debug HTTP host.",
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 45000
+        }
+      }
     }
   }
 }
+
+
+
+

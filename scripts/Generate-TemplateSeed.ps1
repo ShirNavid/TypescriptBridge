@@ -32,7 +32,7 @@ Write-Host "  Intermediate: $intermediate"
 Write-Host ""
 
 & dotnet exec $toolDll `
-    --config (Join-Path $templateContent "typescript-bridge.json") `
+    --config (Join-Path $templateContent "config.json") `
     --project $templateContent `
     --intermediate $intermediate `
     --configuration "Debug" `
@@ -54,5 +54,6 @@ Move-Item $generated $final -Force
 Write-Host ""
 Write-Host "Seed generated: $final" -ForegroundColor Green
 Write-Host "  Size: $((Get-Item $final).Length) bytes"
+
 
 

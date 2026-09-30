@@ -8,7 +8,8 @@ internal static class SchemaValidator
     {
         "output",
         "typescript",
-        "minify",
+        "release-minify",
+        "run",
     };
 
     private static readonly HashSet<string> AllowedOutputProperties = new(StringComparer.Ordinal)
@@ -27,6 +28,12 @@ internal static class SchemaValidator
     {
         "level",
         "keepNames",
+    };
+
+    private static readonly HashSet<string> AllowedRunProperties = new(StringComparer.Ordinal)
+    {
+        "browser",
+        "port",
     };
 
     private static readonly HashSet<string> ValidTargets = new(StringComparer.Ordinal)
@@ -55,6 +62,13 @@ internal static class SchemaValidator
         "light",
         "full",
         "aggressive",
+    };
+
+
+    private static readonly HashSet<string> ValidBrowsers = new(StringComparer.Ordinal)
+    {
+        "edge",
+        "chrome",
     };
 
     private static readonly HashSet<string> CSharpKeywords = new(StringComparer.Ordinal)
@@ -153,8 +167,43 @@ internal static class SchemaValidator
         if (root.TryGetProperty("typescript", out var typescript))
             ValidateTypeScript(typescript);
 
-        if (root.TryGetProperty("minify", out var minify))
-            ValidateMinify(minify);
+        if (root.TryGetProperty("release-minify", out var releaseMinify))
+            ValidateMinify(releaseMinify);
+
+        if (root.TryGetProperty("run", out var run))
+            ValidateRun(run);
+    }
+
+    private static void ValidateRun(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+            Fail("$.run", "must be an object.");
+
+        ValidateProperties(element, AllowedRunProperties, "$.run");
+
+
+        if (element.TryGetProperty("browser", out var browser))
+        {
+            if (browser.ValueKind != JsonValueKind.String)
+                Fail("$.run.browser", "must be a string.");
+
+            var value = browser.GetString()!;
+
+            if (!ValidBrowsers.Contains(value))
+                Fail("$.run.browser", $"unknown value \"{value}\".");
+        }
+
+        if (element.TryGetProperty("port", out var port))
+        {
+            if (port.ValueKind != JsonValueKind.Number)
+                Fail("$.run.port", "must be a number.");
+
+            if (!port.TryGetInt32(out var value))
+                Fail("$.run.port", "must be a 32-bit integer.");
+
+            if (value < 1 || value > 65535)
+                Fail("$.run.port", "must be between 1 and 65535.");
+        }
     }
 
     private static void ValidateOutput(JsonElement element)
@@ -204,26 +253,26 @@ internal static class SchemaValidator
     private static void ValidateMinify(JsonElement element)
     {
         if (element.ValueKind != JsonValueKind.Object)
-            Fail("$.minify", "must be an object.");
+            Fail("$.release-minify", "must be an object.");
 
-        ValidateProperties(element, AllowedMinifyProperties, "$.minify");
+        ValidateProperties(element, AllowedMinifyProperties, "$.release-minify");
 
         if (element.TryGetProperty("level", out var level))
         {
             if (level.ValueKind != JsonValueKind.String)
-                Fail("$.minify.level", "must be a string.");
+                Fail("$.release-minify.level", "must be a string.");
 
             var value = level.GetString()!;
 
             if (!ValidMinifyLevels.Contains(value))
-                Fail("$.minify.level", $"unknown value \"{value}\".");
+                Fail("$.release-minify.level", $"unknown value \"{value}\".");
         }
 
         if (element.TryGetProperty("keepNames", out var keepNames) &&
             keepNames.ValueKind != JsonValueKind.True &&
             keepNames.ValueKind != JsonValueKind.False)
         {
-            Fail("$.minify.keepNames", "must be a boolean.");
+            Fail("$.release-minify.keepNames", "must be a boolean.");
         }
     }
 
@@ -269,3 +318,9 @@ internal static class SchemaValidator
             $"{path}: {message}");
     }
 }
+
+
+
+
+
+

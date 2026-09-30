@@ -11,8 +11,11 @@ public sealed class Config
     [JsonPropertyName("typescript")]
     public TypeScriptConfig TypeScript { get; init; } = new();
 
-    [JsonPropertyName("minify")]
-    public MinifyConfig Minify { get; init; } = new();
+    [JsonPropertyName("release-minify")]
+    public ReleaseMinifyConfig ReleaseMinify { get; init; } = new();
+
+    [JsonPropertyName("run")]
+    public RunConfig Run { get; init; } = new();
 
     public static Config Load(string path)
     {
@@ -107,7 +110,7 @@ public sealed class TypeScriptConfig
     public string Format { get; init; } = "iife";
 }
 
-public sealed class MinifyConfig
+public sealed class ReleaseMinifyConfig
 {
     [JsonPropertyName("level")]
     public string Level { get; init; } = "aggressive";
@@ -115,3 +118,17 @@ public sealed class MinifyConfig
     [JsonPropertyName("keepNames")]
     public bool KeepNames { get; init; } = true;
 }
+
+public sealed class RunConfig
+{
+    [JsonPropertyName("browser")]
+    public string Browser { get; init; } = "edge";
+
+    // Port used by the debug HTTP host. The generated launch.json
+    // references this exact value, so it must be stable between build
+    // and run.
+    [JsonPropertyName("port")]
+    public int Port { get; init; } = 45000;
+}
+
+

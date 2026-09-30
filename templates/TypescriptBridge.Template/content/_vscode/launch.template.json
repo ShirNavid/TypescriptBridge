@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "TypescriptBridge Debug",
+      "type": "__TSB_BROWSER__",
+      "request": "launch",
+      "url": "http://127.0.0.1:__TSB_PORT__/index.html",
+      "webRoot": "${workspaceFolder}/ts",
+      "userDataDir": "${workspaceFolder}/obj/TypescriptBridge/browser-profile"
+    }
+  ]
+}
