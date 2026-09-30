@@ -2,23 +2,19 @@ using TypescriptBridge.Tool;
 
 namespace TypescriptBridge.IntegrationTests;
 
-// Tests for the minify/minification behavior of EsbuildRunner.
-// These tests verify that DEBUG builds never receive minification flags,
-// and that release builds respect the release-minify configuration.
+// Tests for the argument-building behavior of EsbuildRunner.
+// These tests verify that DEBUG builds never receive minification
+// flags, that release builds respect the release-minify configuration,
+// and that the target and format are passed through correctly.
 public sealed class EsbuildRunnerTests
 {
-    // Builds the argument list for a simple invocation with the given settings.
+    // Builds the minify argument list with the given settings.
     private static List<string> BuildArgsWithMinify(
         string buildMode,
         string level,
         bool keepNames)
     {
         var args = new List<string>();
-        var ts = new TypeScriptConfig
-        {
-            Target = "es2020",
-            Format = "iife",
-        };
         var releaseMinify = new ReleaseMinifyConfig
         {
             Level = level,
@@ -115,16 +111,11 @@ public sealed class EsbuildRunnerTests
     [Fact]
     public void BuildArgs_IncludesBuildModeDefine()
     {
-        var ts = new TypeScriptConfig
-        {
-            Target = "es2020",
-            Format = "iife",
-        };
-
         var args = EsbuildRunner.BuildArgs(
             "entry.ts",
             "out.js",
-            ts,
+            "es2020",
+            "iife",
             "DEBUG");
 
         Assert.Contains("--define:BUILD_MODE=\"DEBUG\"", args);
@@ -134,21 +125,31 @@ public sealed class EsbuildRunnerTests
     [Fact]
     public void BuildArgs_IncludesTargetFormatOutfile()
     {
-        var ts = new TypeScriptConfig
-        {
-            Target = "es2022",
-            Format = "esm",
-        };
-
         var args = EsbuildRunner.BuildArgs(
             "entry.ts",
             "out.js",
-            ts,
+            "es2022",
+            "esm",
             "RELEASE");
 
         Assert.Contains("--target=es2022", args);
         Assert.Contains("--format=esm", args);
         Assert.Contains("--outfile=out.js", args);
         Assert.Contains("--bundle", args);
+    }
+
+    // BuildArgs uses the target that the caller provided.
+    // The Tool obtains this value from tsconfig.json compilerOptions.target.
+    [Fact]
+    public void BuildArgs_UsesProvidedTarget()
+    {
+        var args = EsbuildRunner.BuildArgs(
+            "entry.ts",
+            "out.js",
+            "es2015",
+            "iife",
+            "DEBUG");
+
+        Assert.Contains("--target=es2015", args);
     }
 }

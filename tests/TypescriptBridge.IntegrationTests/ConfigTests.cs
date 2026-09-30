@@ -43,8 +43,7 @@ public sealed class ConfigTests : IDisposable
                 "className": "MyProvider",
                 "fieldName": "MyCode"
               },
-              "typescript": {
-                "target": "es2022",
+              "bundle": {
                 "format": "esm"
               },
               "release-minify": {
@@ -58,8 +57,7 @@ public sealed class ConfigTests : IDisposable
 
         Assert.Equal("MyProvider", config.Output.ClassName);
         Assert.Equal("MyCode", config.Output.FieldName);
-        Assert.Equal("es2022", config.TypeScript.Target);
-        Assert.Equal("esm", config.TypeScript.Format);
+        Assert.Equal("esm", config.Bundle.Format);
         Assert.Equal("full", config.ReleaseMinify.Level);
         Assert.False(config.ReleaseMinify.KeepNames);
     }
@@ -74,8 +72,7 @@ public sealed class ConfigTests : IDisposable
 
         Assert.Equal("TypescriptProvider", config.Output.ClassName);
         Assert.Equal("TypescriptCode", config.Output.FieldName);
-        Assert.Equal("es2020", config.TypeScript.Target);
-        Assert.Equal("iife", config.TypeScript.Format);
+        Assert.Equal("iife", config.Bundle.Format);
         Assert.Equal("aggressive", config.ReleaseMinify.Level);
         Assert.True(config.ReleaseMinify.KeepNames);
     }
@@ -152,11 +149,40 @@ public sealed class ConfigTests : IDisposable
         Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
     }
 
-    // Verifies that an invalid target value is reported as a validation failure.
+    // Verifies that the obsolete "typescript" section is rejected with a
+    // migration message.
     [Fact]
-    public void Load_RejectsInvalidTarget()
+    public void Load_RejectsObsoleteTypeScriptSection()
     {
-        var path = WriteConfig("""{ "typescript": { "target": "es1999" } }""");
+        var path = WriteConfig("""{ "typescript": { "target": "es2020", "format": "iife" } }""");
+
+        var exception = Assert.Throws<TypescriptBridgeException>(
+            () => Config.Load(path));
+
+        Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
+        Assert.Contains("no longer supported", exception.Message);
+        Assert.Contains("tsconfig.json", exception.Message);
+        Assert.Contains("bundle.format", exception.Message);
+    }
+
+    // Verifies that an invalid bundle format value is rejected.
+    [Fact]
+    public void Load_RejectsInvalidBundleFormat()
+    {
+        var path = WriteConfig("""{ "bundle": { "format": "umd" } }""");
+
+        var exception = Assert.Throws<TypescriptBridgeException>(
+            () => Config.Load(path));
+
+        Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
+        Assert.Contains("umd", exception.Message);
+    }
+
+    // Verifies that an unknown property inside bundle is rejected.
+    [Fact]
+    public void Load_RejectsUnknownBundleProperty()
+    {
+        var path = WriteConfig("""{ "bundle": { "unknownSetting": true } }""");
 
         var exception = Assert.Throws<TypescriptBridgeException>(
             () => Config.Load(path));
@@ -165,7 +191,7 @@ public sealed class ConfigTests : IDisposable
     }
 
     // -------------------------------------------------------------------------
-    // Run section tests (secondary vision).
+    // Run section tests.
     // -------------------------------------------------------------------------
 
     // Defaults: an empty config must yield edge browser and port 45000.
@@ -179,7 +205,6 @@ public sealed class ConfigTests : IDisposable
         Assert.Equal("edge", config.Run.Browser);
         Assert.Equal(45000, config.Run.Port);
     }
-
 
     // Explicit edge browser is accepted.
     [Fact]
@@ -214,7 +239,6 @@ public sealed class ConfigTests : IDisposable
 
         Assert.Equal("chrome", config.Run.Browser);
     }
-
 
     // Unknown browser rejected.
     [Fact]
@@ -276,8 +300,3 @@ public sealed class ConfigTests : IDisposable
         Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
     }
 }
-
-
-
-
-

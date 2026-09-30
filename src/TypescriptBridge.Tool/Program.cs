@@ -1,11 +1,12 @@
+using System.Text.Json;
 using TypescriptBridge.Tool;
 
 // Entry point for the tool. All real work happens inside Run so that
 // we can keep the top-level statement simple and testable.
 return Run(args);
 
-// Runs the whole pipeline: load config, locate esbuild, invoke esbuild
-// with BUILD_MODE injected, and write Bridge.cs.
+// Runs the whole pipeline: load config, read tsconfig.json, locate
+// esbuild, invoke esbuild with BUILD_MODE injected, and write Bridge.cs.
 static int Run(string[] args)
 {
     ToolOptions options;
@@ -26,11 +27,18 @@ static int Run(string[] args)
         // Load and validate the configuration file.
         var config = Config.Load(options.ConfigPath);
 
+        // Load tsconfig.json and read compilerOptions.target.
+        var tsconfigPath = Path.Combine(
+            options.ProjectDirectory,
+            "tsconfig.json");
+
+        var target = TsConfigReader.ReadTarget(tsconfigPath);
+
         Console.WriteLine($"TypescriptBridge: config loaded from {options.ConfigPath}");
         Console.WriteLine($"  class         = {config.Output.ClassName}");
         Console.WriteLine($"  field         = {config.Output.FieldName}");
-        Console.WriteLine($"  target        = {config.TypeScript.Target}");
-        Console.WriteLine($"  format        = {config.TypeScript.Format}");
+        Console.WriteLine($"  target        = {target} (from tsconfig.json)");
+        Console.WriteLine($"  format        = {config.Bundle.Format}");
         Console.WriteLine($"  minify level  = {config.ReleaseMinify.Level}");
         Console.WriteLine($"  keepNames     = {config.ReleaseMinify.KeepNames}");
         Console.WriteLine($"  configuration = {options.Configuration}");
@@ -56,20 +64,6 @@ static int Run(string[] args)
         var intermediateDir = options.IntermediateOutputPath;
         Directory.CreateDirectory(intermediateDir);
 
-        // Branch on the operation mode.
-        if (options.Mode == "debug")
-        {
-            var sessionDir = DebugSession.Run(
-                options,
-                config,
-                esbuildPath);
-
-            Console.WriteLine($"  session dir   = {sessionDir}");
-
-            return 0;
-        }
-
-        // Default: build mode.
         // Two esbuild invocations are performed on every build:
         //   - one with BUILD_MODE="DEBUG"
         //   - one with BUILD_MODE="RELEASE"
@@ -85,7 +79,8 @@ static int Run(string[] args)
         runner.Run(
             appEntryPoint,
             jsDebugPath,
-            config.TypeScript,
+            target,
+            config.Bundle.Format,
             config.ReleaseMinify,
             "DEBUG",
             options.ProjectDirectory);
@@ -100,7 +95,8 @@ static int Run(string[] args)
         runner.Run(
             appEntryPoint,
             jsReleasePath,
-            config.TypeScript,
+            target,
+            config.Bundle.Format,
             config.ReleaseMinify,
             "RELEASE",
             options.ProjectDirectory);
@@ -175,21 +171,6 @@ internal sealed class ToolOptions
     // still produce a deterministic BUILD_MODE value.
     public string Configuration { get; init; } = "Debug";
 
-    // Operation mode.
-    // "build"  -> normal Bridge.cs generation (default).
-    // "debug"  -> debug session artifacts (js, map, html, server, esproj).
-    public string Mode { get; init; } = "build";
-
-    // Session id for debug mode. Required when Mode == "debug".
-    public string? SessionId { get; init; }
-
-    // Root directory for debug session artifacts.
-    // Required when Mode == "debug".
-    public string? DebugOutputRoot { get; init; }
-
-    // Port for the local HTTP debug host. Required when Mode == "debug".
-    public int Port { get; init; }
-
     // Parses the command line arguments into a ToolOptions instance.
     public static ToolOptions Parse(string[] args)
     {
@@ -198,10 +179,6 @@ internal sealed class ToolOptions
         string? intermediate = null;
         string? esbuildPath = null;
         string? configuration = null;
-        string? mode = null;
-        string? sessionId = null;
-        string? debugOutput = null;
-        int port = 0;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -242,40 +219,16 @@ internal sealed class ToolOptions
                         "--configuration");
                     break;
 
+                // Reject arguments that belonged to the removed debug mode.
                 case "--mode":
-                    mode = RequireValue(
-                        args,
-                        ref i,
-                        "--mode");
-                    break;
-
                 case "--session":
-                    sessionId = RequireValue(
-                        args,
-                        ref i,
-                        "--session");
-                    break;
-
                 case "--debug-output":
-                    debugOutput = RequireValue(
-                        args,
-                        ref i,
-                        "--debug-output");
-                    break;
-
                 case "--port":
-                    var portValue = RequireValue(
-                        args,
-                        ref i,
-                        "--port");
-
-                    if (!int.TryParse(portValue, out port) || port < 1 || port > 65535)
-                    {
-                        throw new TypescriptBridgeException(
-                            ErrorCodes.General,
-                            $"Invalid --port value: {portValue}");
-                    }
-                    break;
+                    throw new TypescriptBridgeException(
+                        ErrorCodes.General,
+                        $"Argument {args[i]} is no longer supported. " +
+                        "The Tool has been simplified to build-only mode. " +
+                        "Debug artifact generation is now handled by server.js.");
 
                 case "--help":
                 case "-h":
@@ -313,50 +266,9 @@ internal sealed class ToolOptions
         }
 
         // Apply the default configuration if it was not provided.
-        // This keeps manual tool invocations working without extra flags.
         if (string.IsNullOrWhiteSpace(configuration))
         {
             configuration = "Debug";
-        }
-
-        // Default mode is "build".
-        if (string.IsNullOrWhiteSpace(mode))
-        {
-            mode = "build";
-        }
-
-        mode = mode.ToLowerInvariant();
-
-        if (mode != "build" && mode != "debug")
-        {
-            throw new TypescriptBridgeException(
-                ErrorCodes.General,
-                $"Invalid --mode value: {mode}. Expected 'build' or 'debug'.");
-        }
-
-        // Validate debug-mode requirements.
-        if (mode == "debug")
-        {
-            if (string.IsNullOrWhiteSpace(sessionId))
-            {
-                throw new TypescriptBridgeException(
-                    ErrorCodes.General,
-                    "Missing required argument for debug mode: --session");
-            }
-
-            if (string.IsNullOrWhiteSpace(debugOutput))
-            {
-                throw new TypescriptBridgeException(
-                    ErrorCodes.General,
-                    "Missing required argument for debug mode: --debug-output");
-            }
-
-            if (port == 0)
-            {
-                throw new TypescriptBridgeException(
-                    ErrorCodes.General,
-                    "Missing required argument for debug mode: --port");
-            }
         }
 
         return new ToolOptions
@@ -366,10 +278,6 @@ internal sealed class ToolOptions
             IntermediateOutputPath = Path.GetFullPath(intermediate, Path.GetFullPath(projectDir)),
             EsbuildPath = esbuildPath,
             Configuration = configuration,
-            Mode = mode,
-            SessionId = sessionId,
-            DebugOutputRoot = debugOutput is null ? null : Path.GetFullPath(debugOutput),
-            Port = port,
         };
     }
 
@@ -400,14 +308,86 @@ internal sealed class ToolOptions
         Console.WriteLine(
             "  TypescriptBridge.Tool --config <path> --project <path> --intermediate <path> [--esbuild <path>] [--configuration <name>]");
         Console.WriteLine();
-        Console.WriteLine("Debug session mode:");
-        Console.WriteLine(
-            "  TypescriptBridge.Tool --config <path> --project <path> --intermediate <path> --mode debug --session <id> --debug-output <path> --port <n> [--esbuild <path>]");
+        Console.WriteLine("The Tool has no debug mode. Debug artifact generation is handled by server.js in the generated project.");
     }
 }
 
+// Reads compilerOptions.target from tsconfig.json.
+// Hard-fails when the file is missing or the property is missing.
+internal static class TsConfigReader
+{
+    public static string ReadTarget(string tsconfigPath)
+    {
+        if (!File.Exists(tsconfigPath))
+        {
+            throw new TypescriptBridgeException(
+                ErrorCodes.ConfigValidationFailed,
+                $"tsconfig.json not found: {tsconfigPath}");
+        }
 
+        string json;
 
+        try
+        {
+            json = File.ReadAllText(tsconfigPath);
+        }
+        catch (IOException ex)
+        {
+            throw new TypescriptBridgeException(
+                ErrorCodes.ConfigInvalidJson,
+                $"Failed to read tsconfig.json: {ex.Message}");
+        }
 
+        JsonDocument doc;
 
+        try
+        {
+            doc = JsonDocument.Parse(json, new JsonDocumentOptions
+            {
+                CommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true,
+            });
+        }
+        catch (JsonException ex)
+        {
+            throw new TypescriptBridgeException(
+                ErrorCodes.ConfigInvalidJson,
+                $"Invalid JSON in tsconfig.json: {ex.Message}");
+        }
 
+        using (doc)
+        {
+            if (!doc.RootElement.TryGetProperty("compilerOptions", out var compilerOptions))
+            {
+                throw new TypescriptBridgeException(
+                    ErrorCodes.ConfigValidationFailed,
+                    "tsconfig.json: missing \"compilerOptions\" object.");
+            }
+
+            if (!compilerOptions.TryGetProperty("target", out var target))
+            {
+                throw new TypescriptBridgeException(
+                    ErrorCodes.ConfigValidationFailed,
+                    "tsconfig.json: missing \"compilerOptions.target\".");
+            }
+
+            if (target.ValueKind != JsonValueKind.String)
+            {
+                throw new TypescriptBridgeException(
+                    ErrorCodes.ConfigValidationFailed,
+                    "tsconfig.json: \"compilerOptions.target\" must be a string.");
+            }
+
+            var value = target.GetString();
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new TypescriptBridgeException(
+                    ErrorCodes.ConfigValidationFailed,
+                    "tsconfig.json: \"compilerOptions.target\" must not be empty.");
+            }
+
+            return value!;
+        }
+    }
+}

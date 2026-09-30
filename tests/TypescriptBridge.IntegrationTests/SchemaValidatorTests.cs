@@ -24,8 +24,7 @@ public sealed class SchemaValidatorTests
                 "className": "TypescriptProvider",
                 "fieldName": "TypescriptCode"
               },
-              "typescript": {
-                "target": "es2020",
+              "bundle": {
                 "format": "iife"
               },
               "release-minify": {
@@ -75,30 +74,45 @@ public sealed class SchemaValidatorTests
         Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
     }
 
-    // Verifies that an unsupported target value is rejected.
+    // Verifies that the obsolete "typescript" section is rejected with a
+    // clear migration message.
     [Fact]
-    public void Validate_RejectsUnknownTarget()
+    public void Validate_RejectsObsoleteTypeScriptSection()
     {
-        var json = """{ "typescript": { "target": "es1999" } }""";
+        var json = """{ "typescript": { "target": "es2020" } }""";
 
         var exception = Assert.Throws<TypescriptBridgeException>(
             () => SchemaValidator.Validate(Parse(json)));
 
         Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
-        Assert.Contains("es1999", exception.Message);
+        Assert.Contains("no longer supported", exception.Message);
+        Assert.Contains("tsconfig.json", exception.Message);
+        Assert.Contains("bundle.format", exception.Message);
     }
 
-    // Verifies that an unsupported format value is rejected.
+    // Verifies that an unsupported bundle format value is rejected.
     [Fact]
     public void Validate_RejectsUnknownFormat()
     {
-        var json = """{ "typescript": { "format": "umd" } }""";
+        var json = """{ "bundle": { "format": "umd" } }""";
 
         var exception = Assert.Throws<TypescriptBridgeException>(
             () => SchemaValidator.Validate(Parse(json)));
 
         Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
         Assert.Contains("umd", exception.Message);
+    }
+
+    // Verifies that an unknown property inside bundle is rejected.
+    [Fact]
+    public void Validate_RejectsUnknownBundleProperty()
+    {
+        var json = """{ "bundle": { "unknownSetting": true } }""";
+
+        var exception = Assert.Throws<TypescriptBridgeException>(
+            () => SchemaValidator.Validate(Parse(json)));
+
+        Assert.Equal(ErrorCodes.ConfigValidationFailed, exception.Code);
     }
 
     // Verifies that an unsupported minify level is rejected.
@@ -227,5 +241,3 @@ public sealed class SchemaValidatorTests
         Assert.Equal(contentA, contentB);
     }
 }
-
-

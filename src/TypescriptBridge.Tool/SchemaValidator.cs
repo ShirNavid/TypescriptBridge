@@ -7,7 +7,7 @@ internal static class SchemaValidator
     private static readonly HashSet<string> AllowedRootProperties = new(StringComparer.Ordinal)
     {
         "output",
-        "typescript",
+        "bundle",
         "release-minify",
         "run",
     };
@@ -18,9 +18,8 @@ internal static class SchemaValidator
         "fieldName",
     };
 
-    private static readonly HashSet<string> AllowedTypeScriptProperties = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> AllowedBundleProperties = new(StringComparer.Ordinal)
     {
-        "target",
         "format",
     };
 
@@ -34,19 +33,6 @@ internal static class SchemaValidator
     {
         "browser",
         "port",
-    };
-
-    private static readonly HashSet<string> ValidTargets = new(StringComparer.Ordinal)
-    {
-        "es2015",
-        "es2016",
-        "es2017",
-        "es2018",
-        "es2019",
-        "es2020",
-        "es2021",
-        "es2022",
-        "esnext",
     };
 
     private static readonly HashSet<string> ValidFormats = new(StringComparer.Ordinal)
@@ -63,7 +49,6 @@ internal static class SchemaValidator
         "full",
         "aggressive",
     };
-
 
     private static readonly HashSet<string> ValidBrowsers = new(StringComparer.Ordinal)
     {
@@ -159,13 +144,13 @@ internal static class SchemaValidator
             Fail("$", "must be a JSON object.");
         }
 
-        ValidateProperties(root, AllowedRootProperties, "$");
+        ValidateRootProperties(root);
 
         if (root.TryGetProperty("output", out var output))
             ValidateOutput(output);
 
-        if (root.TryGetProperty("typescript", out var typescript))
-            ValidateTypeScript(typescript);
+        if (root.TryGetProperty("bundle", out var bundle))
+            ValidateBundle(bundle);
 
         if (root.TryGetProperty("release-minify", out var releaseMinify))
             ValidateMinify(releaseMinify);
@@ -174,13 +159,53 @@ internal static class SchemaValidator
             ValidateRun(run);
     }
 
+    // Validates the root properties and provides a specific migration
+    // message when the obsolete "typescript" section is present.
+    private static void ValidateRootProperties(JsonElement element)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (property.Name == "typescript")
+            {
+                Fail(
+                    "$.typescript",
+                    "is no longer supported. " +
+                    "Move \"target\" to tsconfig.json compilerOptions.target " +
+                    "and \"format\" to config.json bundle.format.");
+            }
+
+            if (!AllowedRootProperties.Contains(property.Name))
+            {
+                Fail($"$.{property.Name}", "unknown property.");
+            }
+        }
+    }
+
+    private static void ValidateBundle(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+            Fail("$.bundle", "must be an object.");
+
+        ValidateProperties(element, AllowedBundleProperties, "$.bundle");
+
+        if (element.TryGetProperty("format", out var format))
+        {
+            if (format.ValueKind != JsonValueKind.String)
+                Fail("$.bundle.format", "must be a string.");
+
+            var value = format.GetString()!;
+
+            if (!ValidFormats.Contains(value))
+                Fail("$.bundle.format", $"unknown value \"{value}\".");
+        }
+    }
+
     private static void ValidateRun(JsonElement element)
     {
         if (element.ValueKind != JsonValueKind.Object)
             Fail("$.run", "must be an object.");
 
         ValidateProperties(element, AllowedRunProperties, "$.run");
-
 
         if (element.TryGetProperty("browser", out var browser))
         {
@@ -218,36 +243,6 @@ internal static class SchemaValidator
 
         if (element.TryGetProperty("fieldName", out var fieldName))
             ValidateIdentifier(fieldName, "$.output.fieldName");
-    }
-
-    private static void ValidateTypeScript(JsonElement element)
-    {
-        if (element.ValueKind != JsonValueKind.Object)
-            Fail("$.typescript", "must be an object.");
-
-        ValidateProperties(element, AllowedTypeScriptProperties, "$.typescript");
-
-        if (element.TryGetProperty("target", out var target))
-        {
-            if (target.ValueKind != JsonValueKind.String)
-                Fail("$.typescript.target", "must be a string.");
-
-            var value = target.GetString()!;
-
-            if (!ValidTargets.Contains(value))
-                Fail("$.typescript.target", $"unknown value \"{value}\".");
-        }
-
-        if (element.TryGetProperty("format", out var format))
-        {
-            if (format.ValueKind != JsonValueKind.String)
-                Fail("$.typescript.format", "must be a string.");
-
-            var value = format.GetString()!;
-
-            if (!ValidFormats.Contains(value))
-                Fail("$.typescript.format", $"unknown value \"{value}\".");
-        }
     }
 
     private static void ValidateMinify(JsonElement element)
@@ -318,9 +313,3 @@ internal static class SchemaValidator
             $"{path}: {message}");
     }
 }
-
-
-
-
-
-

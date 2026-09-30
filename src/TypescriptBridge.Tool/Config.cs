@@ -8,8 +8,8 @@ public sealed class Config
     [JsonPropertyName("output")]
     public OutputConfig Output { get; init; } = new();
 
-    [JsonPropertyName("typescript")]
-    public TypeScriptConfig TypeScript { get; init; } = new();
+    [JsonPropertyName("bundle")]
+    public BundleConfig Bundle { get; init; } = new();
 
     [JsonPropertyName("release-minify")]
     public ReleaseMinifyConfig ReleaseMinify { get; init; } = new();
@@ -101,11 +101,15 @@ public sealed class OutputConfig
     public string FieldName { get; init; } = "TypescriptCode";
 }
 
-public sealed class TypeScriptConfig
+// Bundler-level options that affect the emitted JavaScript shape.
+//
+// Note: the TypeScript target is NOT part of this class. The target
+// lives in tsconfig.json (compilerOptions.target), which is the single
+// source of truth for TypeScript compiler semantics. The Tool reads
+// the target from tsconfig.json and passes it to EsbuildRunner as a
+// separate parameter.
+public sealed class BundleConfig
 {
-    [JsonPropertyName("target")]
-    public string Target { get; init; } = "es2020";
-
     [JsonPropertyName("format")]
     public string Format { get; init; } = "iife";
 }
@@ -130,5 +134,3 @@ public sealed class RunConfig
     [JsonPropertyName("port")]
     public int Port { get; init; } = 45000;
 }
-
-
