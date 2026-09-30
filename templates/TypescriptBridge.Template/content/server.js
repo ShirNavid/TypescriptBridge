@@ -2,21 +2,15 @@
 //
 // Responsibilities:
 //   1. Parse --f5 (do not launch a browser in F5 mode).
-//   2. Read config.json and tsconfig.json.
+//   2. Read config.json and ts/tsconfig.json.
 //   3. Validate the port from config.json.
 //   4. Clean and recreate obj/TypescriptBridge/debug/.
 //   5. Locate esbuild.
-//   6. Run esbuild synchronously to produce debug.js and debug.js.map.
-//   7. Write index.html.
-//   8. Start an HTTP server on 127.0.0.1:<port>.
+//   6. Run esbuild synchronously on ts/src/app.ts.
+//   7. Write debug.js + debug.js.map + index.html.
+//   8. Start HTTP on 127.0.0.1:<port>.
 //   9. Wait for SIGINT.
-//  10. On SIGINT: stop the server and (in direct mode) kill the browser.
-//
-// In F5 mode, this script does NOT launch the browser. Visual Studio
-// launches it based on .vscode/launch.json.
-//
-// In direct mode (no --f5), this script launches the browser and
-// manages its lifetime.
+//  10. On SIGINT: stop the server and (direct mode) kill the browser.
 
 "use strict";
 
@@ -25,14 +19,10 @@ const fs = require("fs");
 const path = require("path");
 const { spawnSync, spawn } = require("child_process");
 
-// -----------------------------------------------------------------------------
-// Project layout constants.
-// -----------------------------------------------------------------------------
-
 const projectRoot = __dirname;
 const configPath = path.join(projectRoot, "config.json");
-const tsconfigPath = path.join(projectRoot, "tsconfig.json");
-const appEntryPoint = path.join(projectRoot, "ts", "app.ts");
+const tsconfigPath = path.join(projectRoot, "ts", "tsconfig.json");
+const appEntryPoint = path.join(projectRoot, "ts", "src", "app.ts");
 
 const objRoot = path.join(projectRoot, "obj", "TypescriptBridge");
 const debugRoot = path.join(objRoot, "debug");
@@ -56,15 +46,7 @@ const legacyEsbuildPath = path.join(
     "esbuild.exe"
 );
 
-// -----------------------------------------------------------------------------
-// Argument parsing.
-// -----------------------------------------------------------------------------
-
 const isF5Mode = process.argv.includes("--f5");
-
-// -----------------------------------------------------------------------------
-// Utilities.
-// -----------------------------------------------------------------------------
 
 function fatal(message) {
     process.stderr.write("TypescriptBridge: " + message + "\n");
@@ -114,33 +96,12 @@ function locateEsbuild() {
     if (envPath && fs.existsSync(envPath)) {
         return envPath;
     }
-    fatal(
-        "esbuild not found. Looked at:\n" +
-        "  " + stableEsbuildPath + "\n" +
-        "  " + legacyEsbuildPath + "\n" +
-        "  TS_HANDLER_ESBUILD_PATH"
-    );
+    fatal("esbuild not found. Looked at:\n  " + stableEsbuildPath + "\n  " + legacyEsbuildPath);
 }
 
 function buildHtml() {
-    return (
-        "<!DOCTYPE html>\n" +
-        "<html>\n" +
-        "<head>\n" +
-        "    <meta charset=\"utf-8\" />\n" +
-        "    <title>TypescriptBridge Debug</title>\n" +
-        "</head>\n" +
-        "<body>\n" +
-        "    <h1>TypescriptBridge Debug Session</h1>\n" +
-        "    <script src=\"debug.js\"></script>\n" +
-        "</body>\n" +
-        "</html>\n"
-    );
+    return "<!DOCTYPE html>\n<html>\n<head>\n    <meta charset=\"utf-8\" />\n    <title>TypescriptBridge Debug</title>\n</head>\n<body>\n    <h1>TypescriptBridge Debug Session</h1>\n    <script src=\"debug.js\"></script>\n</body>\n</html>\n";
 }
-
-// -----------------------------------------------------------------------------
-// Browser location.
-// -----------------------------------------------------------------------------
 
 function locateBrowser(browser) {
     const candidates = [];
@@ -159,9 +120,7 @@ function locateBrowser(browser) {
             path.join(pf86, "Google", "Chrome", "Application", "chrome.exe")
         );
         if (localAppData) {
-            candidates.push(
-                path.join(localAppData, "Google", "Chrome", "Application", "chrome.exe")
-            );
+            candidates.push(path.join(localAppData, "Google", "Chrome", "Application", "chrome.exe"));
         }
     } else {
         fatal("unknown browser: " + browser);
@@ -172,75 +131,37 @@ function locateBrowser(browser) {
             return candidate;
         }
     }
-
     fatal(browser + " is not installed on this machine.");
 }
 
-// -----------------------------------------------------------------------------
-// Config validation.
-// -----------------------------------------------------------------------------
-
 function loadConfig() {
     const config = readJson(configPath, "config.json");
-
-    if (!config || typeof config !== "object") {
-        fatal("config.json must be an object.");
-    }
-
-    if (!config.run || typeof config.run !== "object") {
-        fatal("config.json: missing 'run' section.");
-    }
-
+    if (!config || typeof config !== "object") fatal("config.json must be an object.");
+    if (!config.run || typeof config.run !== "object") fatal("config.json: missing 'run' section.");
     const browser = config.run.browser;
-    if (browser !== "edge" && browser !== "chrome") {
-        fatal("config.json: run.browser must be 'edge' or 'chrome'.");
-    }
-
+    if (browser !== "edge" && browser !== "chrome") fatal("config.json: run.browser must be 'edge' or 'chrome'.");
     const port = config.run.port;
-    if (typeof port !== "number" || port < 1 || port > 65535) {
-        fatal("config.json: run.port must be a number between 1 and 65535.");
-    }
-
-    if (!config.bundle || typeof config.bundle !== "object") {
-        fatal("config.json: missing 'bundle' section.");
-    }
-
+    if (typeof port !== "number" || port < 1 || port > 65535) fatal("config.json: run.port must be 1-65535.");
+    if (!config.bundle || typeof config.bundle !== "object") fatal("config.json: missing 'bundle' section.");
     const format = config.bundle.format;
-    if (format !== "iife" && format !== "esm" && format !== "cjs") {
-        fatal("config.json: bundle.format must be 'iife', 'esm', or 'cjs'.");
-    }
-
+    if (format !== "iife" && format !== "esm" && format !== "cjs") fatal("config.json: bundle.format invalid.");
     return { browser, port, format };
 }
 
 function loadTsTarget() {
     const tsconfig = readJson(tsconfigPath, "tsconfig.json");
-
-    if (!tsconfig.compilerOptions || typeof tsconfig.compilerOptions !== "object") {
-        fatal("tsconfig.json: missing 'compilerOptions'.");
-    }
-
+    if (!tsconfig.compilerOptions || typeof tsconfig.compilerOptions !== "object") fatal("tsconfig.json: missing 'compilerOptions'.");
     const target = tsconfig.compilerOptions.target;
-    if (typeof target !== "string" || target.length === 0) {
-        fatal("tsconfig.json: missing 'compilerOptions.target'.");
-    }
-
+    if (typeof target !== "string" || target.length === 0) fatal("tsconfig.json: missing 'compilerOptions.target'.");
     return target;
 }
-
-// -----------------------------------------------------------------------------
-// Debug artifact preparation.
-// -----------------------------------------------------------------------------
 
 function prepareDebugArtifacts(target, format) {
     if (!fs.existsSync(appEntryPoint)) {
         fatal("entry point not found: " + appEntryPoint);
     }
-
     cleanDirectory(debugRoot);
-
     const esbuild = locateEsbuild();
-
     const esbuildArgs = [
         appEntryPoint,
         "--bundle",
@@ -253,38 +174,15 @@ function prepareDebugArtifacts(target, format) {
         "--sources-content=true",
         "--log-level=warning"
     ];
-
     info("running esbuild...");
-
-    const result = spawnSync(esbuild, esbuildArgs, {
-        cwd: projectRoot,
-        stdio: "inherit"
-    });
-
-    if (result.error) {
-        fatal("failed to start esbuild: " + result.error.message);
-    }
-
-    if (result.status !== 0) {
-        fatal("esbuild failed with exit code " + result.status);
-    }
-
-    if (!fs.existsSync(debugJsPath)) {
-        fatal("esbuild did not produce " + debugJsPath);
-    }
-
-    if (!fs.existsSync(debugMapPath)) {
-        fatal("esbuild did not produce " + debugMapPath);
-    }
-
+    const result = spawnSync(esbuild, esbuildArgs, { cwd: projectRoot, stdio: "inherit" });
+    if (result.error) fatal("failed to start esbuild: " + result.error.message);
+    if (result.status !== 0) fatal("esbuild failed with exit code " + result.status);
+    if (!fs.existsSync(debugJsPath)) fatal("esbuild did not produce " + debugJsPath);
+    if (!fs.existsSync(debugMapPath)) fatal("esbuild did not produce " + debugMapPath);
     fs.writeFileSync(debugHtmlPath, buildHtml(), "utf8");
-
     info("debug artifacts prepared at " + debugRoot);
 }
-
-// -----------------------------------------------------------------------------
-// HTTP server.
-// -----------------------------------------------------------------------------
 
 function mimeType(ext) {
     switch (ext.toLowerCase()) {
@@ -304,32 +202,15 @@ function startServer(port) {
         try {
             urlPath = decodeURIComponent(req.url.split("?")[0]);
         } catch {
-            res.writeHead(400);
-            res.end("Bad request");
-            return;
+            res.writeHead(400); res.end("Bad request"); return;
         }
-
-        if (urlPath === "/" || urlPath.length === 0) {
-            urlPath = "/index.html";
-        }
-
+        if (urlPath === "/" || urlPath.length === 0) urlPath = "/index.html";
         const requested = path.resolve(debugRoot, "." + urlPath);
-
-        if (
-            requested !== debugRoot &&
-            !requested.startsWith(debugRoot + path.sep)
-        ) {
-            res.writeHead(403);
-            res.end("Forbidden");
-            return;
+        if (requested !== debugRoot && !requested.startsWith(debugRoot + path.sep)) {
+            res.writeHead(403); res.end("Forbidden"); return;
         }
-
         fs.readFile(requested, (err, data) => {
-            if (err) {
-                res.writeHead(404);
-                res.end("Not found");
-                return;
-            }
+            if (err) { res.writeHead(404); res.end("Not found"); return; }
             const mime = mimeType(path.extname(requested));
             res.writeHead(200, { "Content-Type": mime });
             res.end(data);
@@ -344,7 +225,6 @@ function startServer(port) {
                 reject(err);
             }
         });
-
         server.listen(port, "127.0.0.1", () => {
             info("HTTP server listening on http://127.0.0.1:" + port + "/");
             resolve(server);
@@ -352,30 +232,12 @@ function startServer(port) {
     });
 }
 
-// -----------------------------------------------------------------------------
-// Browser launch (direct mode only).
-// -----------------------------------------------------------------------------
-
 function launchBrowser(browserName, url, userDataDir) {
-    if (!fs.existsSync(userDataDir)) {
-        fs.mkdirSync(userDataDir, { recursive: true });
-    }
-
+    if (!fs.existsSync(userDataDir)) fs.mkdirSync(userDataDir, { recursive: true });
     const browserPath = locateBrowser(browserName);
     info("launching " + browserName + " at " + url);
-
-    const args = [
-        "--user-data-dir=" + userDataDir,
-        "--no-first-run",
-        "--no-default-browser-check",
-        url
-    ];
-
-    const child = spawn(browserPath, args, {
-        detached: true,
-        stdio: "ignore"
-    });
-
+    const args = ["--user-data-dir=" + userDataDir, "--no-first-run", "--no-default-browser-check", url];
+    const child = spawn(browserPath, args, { detached: true, stdio: "ignore" });
     child.unref();
     return child.pid;
 }
@@ -383,40 +245,25 @@ function launchBrowser(browserName, url, userDataDir) {
 function killProcessTree(pid) {
     if (!pid) return;
     try {
-        spawnSync("taskkill", ["/T", "/F", "/PID", String(pid)], {
-            stdio: "ignore"
-        });
-    } catch {
-        // Best effort.
-    }
+        spawnSync("taskkill", ["/T", "/F", "/PID", String(pid)], { stdio: "ignore" });
+    } catch { /* ignore */ }
 }
 
 function uniqueProfileDir() {
     const now = new Date();
-    const ts =
-        now.getUTCFullYear().toString() +
+    const ts = now.getUTCFullYear().toString() +
         String(now.getUTCMonth() + 1).padStart(2, "0") +
-        String(now.getUTCDate()).padStart(2, "0") +
-        "-" +
+        String(now.getUTCDate()).padStart(2, "0") + "-" +
         String(now.getUTCHours()).padStart(2, "0") +
         String(now.getUTCMinutes()).padStart(2, "0") +
         String(now.getUTCSeconds()).padStart(2, "0");
     const guid8 = Math.random().toString(16).slice(2, 10);
-    return path.join(
-        objRoot,
-        "browser-profile",
-        ts + "-" + guid8
-    );
+    return path.join(objRoot, "browser-profile", ts + "-" + guid8);
 }
-
-// -----------------------------------------------------------------------------
-// Main.
-// -----------------------------------------------------------------------------
 
 async function main() {
     const config = loadConfig();
     const target = loadTsTarget();
-
     prepareDebugArtifacts(target, config.format);
 
     let server;
@@ -427,7 +274,6 @@ async function main() {
     }
 
     let browserPid = null;
-
     if (!isF5Mode) {
         const profileDir = uniqueProfileDir();
         const url = "http://127.0.0.1:" + config.port + "/index.html";
@@ -438,18 +284,17 @@ async function main() {
 
     const shutdown = (signal) => {
         info("received " + signal + ", shutting down");
-
         try { server.close(); } catch { /* ignore */ }
-
-        if (browserPid) {
-            killProcessTree(browserPid);
-        }
-
+        if (browserPid) killBrowserSafely(browserPid);
         process.exit(0);
     };
 
     process.on("SIGINT", () => shutdown("SIGINT"));
     process.on("SIGTERM", () => shutdown("SIGTERM"));
+}
+
+function killBrowserSafely(pid) {
+    killProcessTree(pid);
 }
 
 main().catch((err) => {

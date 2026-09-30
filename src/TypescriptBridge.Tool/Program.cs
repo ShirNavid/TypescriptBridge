@@ -30,6 +30,7 @@ static int Run(string[] args)
         // Load tsconfig.json and read compilerOptions.target.
         var tsconfigPath = Path.Combine(
             options.ProjectDirectory,
+            "ts",
             "tsconfig.json");
 
         var target = TsConfigReader.ReadTarget(tsconfigPath);
@@ -51,6 +52,7 @@ static int Run(string[] args)
         var appEntryPoint = Path.Combine(
             options.ProjectDirectory,
             "ts",
+            "src",
             "app.ts");
 
         if (!File.Exists(appEntryPoint))
@@ -391,3 +393,4 @@ internal static class TsConfigReader
         }
     }
 }
+

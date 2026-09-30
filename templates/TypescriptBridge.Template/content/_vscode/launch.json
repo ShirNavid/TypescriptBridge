@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "TypescriptBridge Debug",
+      "type": "edge",
+      "request": "launch",
+      "url": "http://127.0.0.1:45000/index.html",
+      "webRoot": "${workspaceFolder}",
+      "userDataDir": "${workspaceFolder}/obj/TypescriptBridge/browser-profile/bootstrap"
+    }
+  ]
+}

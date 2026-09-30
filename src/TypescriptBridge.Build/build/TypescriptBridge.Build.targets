@@ -10,7 +10,7 @@
     Responsibilities:
 
       1. Run the TypescriptBridge.Tool at build time to produce Bridge.cs
-         from the user's ts/app.ts, before the C# compiler runs.
+         from the user's ts/src/app.ts, before the C# compiler runs.
 
       2. Copy the Tool payload and the esbuild binary from the NuGet
          package into a stable location inside the consuming project:
@@ -38,6 +38,12 @@
 
     <!-- Path to the user's config.json inside the consuming project. -->
     <TypescriptBridgeConfigPath Condition="'$(TypescriptBridgeConfigPath)' == ''">$(MSBuildProjectDirectory)\config.json</TypescriptBridgeConfigPath>
+
+    <!-- Path to the user's tsconfig.json. -->
+    <TypescriptBridgeTsConfigPath Condition="'$(TypescriptBridgeTsConfigPath)' == ''">$(MSBuildProjectDirectory)\ts\tsconfig.json</TypescriptBridgeTsConfigPath>
+
+    <!-- Path to the user's TypeScript entry point. -->
+    <TypescriptBridgeEntryPoint Condition="'$(TypescriptBridgeEntryPoint)' == ''">$(MSBuildProjectDirectory)\ts\src\app.ts</TypescriptBridgeEntryPoint>
 
     <!-- Intermediate directory for the tool's scratch files. -->
     <TypescriptBridgeIntermediatePath Condition="'$(TypescriptBridgeIntermediatePath)' == ''">$(BaseIntermediateOutputPath)TypescriptBridge</TypescriptBridgeIntermediatePath>
@@ -73,8 +79,6 @@
     This target runs before TypescriptBridgeGenerate so that the Tool
     can be invoked from the stable location and so that server.js can
     find esbuild there during F5.
-
-    The copies are incremental.
   -->
   <Target Name="TypescriptBridgePrepareTools"
           BeforeTargets="TypescriptBridgeGenerate;BeforeCompile;CoreCompile">
@@ -101,18 +105,15 @@
   </Target>
 
   <!--
-    Run the Tool before the C# compiler. The generated Bridge.cs is
-    picked up by the default Compile glob on the next build, and by
-    the current build because we explicitly register it as a Compile
-    item afterwards.
+    Run the Tool before the C# compiler.
   -->
   <Target Name="TypescriptBridgeGenerate"
           BeforeTargets="BeforeCompile;CoreCompile"
           DependsOnTargets="TypescriptBridgePrepareTools"
-          Inputs="$(MSBuildProjectDirectory)\ts\app.ts;$(TypescriptBridgeConfigPath);$(MSBuildProjectDirectory)\tsconfig.json"
+          Inputs="$(TypescriptBridgeEntryPoint);$(TypescriptBridgeConfigPath);$(TypescriptBridgeTsConfigPath)"
           Outputs="$(MSBuildProjectDirectory)\Bridge.cs">
 
-    <Message Importance="high" Text="TypescriptBridge: generating Bridge.cs from ts/app.ts" />
+    <Message Importance="high" Text="TypescriptBridge: generating Bridge.cs from ts/src/app.ts" />
 
     <MakeDir Directories="$(TypescriptBridgeIntermediatePath)" />
 

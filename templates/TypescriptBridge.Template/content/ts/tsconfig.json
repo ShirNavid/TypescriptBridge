@@ -11,10 +11,10 @@
     "lib": ["es2020", "dom"]
   },
   "include": [
-    "ts/**/*.ts"
+    "src/**/*.ts",
+    "src/default-definitions/**/*.d.ts"
   ],
   "exclude": [
-    "ts/node_modules",
-    "ts/default-definitions"
+    "node_modules"
   ]
 }

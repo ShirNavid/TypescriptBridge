@@ -10,7 +10,7 @@
   "sourceName": "TypescriptProject",
   "preferNameDirectory": true,
   "defaultName": "MyApp",
-  "description": "A TypescriptBridge project. Write TypeScript in ts/app.ts and debug it in Visual Studio with full breakpoints. The compiled JavaScript is embedded into a C# readonly string field that other C# projects can consume.",
+  "description": "A TypescriptBridge project. Write TypeScript in ts/src/app.ts and debug it in Visual Studio with full breakpoints. The compiled JavaScript is embedded into a C# readonly string field that other C# projects can consume.",
   "tags": {
     "type": "project"
   },
@@ -21,6 +21,7 @@
           "rename": {
             "Bridge.cs.template": "Bridge.cs",
             "_vscode/launch.template.json": ".vscode/launch.template.json",
+            "_vscode/launch.json": ".vscode/launch.json",
             "Prepare-DebugSession.ps1.template": "Prepare-DebugSession.ps1"
           }
         }

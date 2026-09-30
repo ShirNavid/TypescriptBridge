@@ -10,13 +10,28 @@ infrastructure.
 
 - Visual Studio 2026 (for the integrated F5 debugger)
 - .NET SDK 8.0 or later
+- .NET 6 targeting pack (installed automatically with .NET SDK 6+ or via the .NET 6 download page)
 - Node.js 18 LTS or later
 - Microsoft Edge or Google Chrome
+
+**Note on the .NET 6 targeting pack:**
+
+The Microsoft JavaScript Project System SDK (used internally by this
+template) declares a net6.0 target framework in its own properties.
+Visual Studio's NuGet design-time check requires the net6.0 targeting
+pack to be present. TypescriptBridge itself does not target .NET 6;
+the targeting pack is a tooling prerequisite for the JavaScript
+Project System only.
+
+The targeting pack can be installed via:
+    winget install Microsoft.DotNet.SDK.6
+or by downloading it from:
+    https://dotnet.microsoft.com/en-us/download/dotnet/6.0
 
 ## Quick start
 
 1. Open `MyApp.slnx` in Visual Studio.
-2. Edit `ts/app.ts`.
+2. Edit `ts/src/app.ts`.
 3. Set a breakpoint.
 4. Press F5.
 
@@ -25,9 +40,9 @@ and attaches the JavaScript/TypeScript debugger. Your breakpoint is hit.
 
 ## Editing TypeScript
 
-The entry point is `ts/app.ts`.
+The entry point is `ts/src/app.ts`.
 
-You can add more `.ts` files anywhere under `ts/`. They appear in
+You can add more `.ts` files anywhere under `ts/src/`. They appear in
 Solution Explorer automatically and are bundled together.
 
 `BUILD_MODE` is a global constant injected at build time. It is
@@ -64,7 +79,7 @@ defaults.
 | `run.browser` | Debug browser: `edge` or `chrome` | `edge` |
 | `run.port` | Debug HTTP port | `45000` |
 
-`tsconfig.json` controls the TypeScript language service and the
+`ts/tsconfig.json` controls the TypeScript language service and the
 TypeScript compilation target.
 
 ## Consuming from C#
@@ -87,10 +102,10 @@ Then in your C# code:
 
 | File | Purpose |
 | --- | --- |
-| `ts/app.ts` | TypeScript entry point (edit this) |
+| `ts/src/app.ts` | TypeScript entry point (edit this) |
 | `ts/package.json` | npm dependency manifest |
+| `ts/tsconfig.json` | TypeScript compiler settings |
 | `config.json` | Project configuration |
-| `tsconfig.json` | TypeScript compiler settings |
 | `README.md` | This file |
 | `MyApp.slnx` | Solution file |
 | `MyApp.esproj` | Developer-facing project (F5 target) |
@@ -105,7 +120,7 @@ Explorer. They are maintained automatically:
 - `server.js` — local HTTP server for the debug session
 - `Prepare-DebugSession.ps1` — generates `launch.json` before each F5
 - `.vscode/` — debugger configuration
-- `ts/default-definitions/` — TypeScript global declarations
+- `ts/src/default-definitions/` — TypeScript global declarations
 - `ts/node_modules/` — npm packages
 - `obj/` — intermediate build output
 
