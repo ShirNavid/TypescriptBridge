@@ -19,7 +19,6 @@
       "modifiers": [
         {
           "rename": {
-            "Bridge.cs.template": "Bridge.cs",
             "_vscode/launch.template.json": ".vscode/launch.template.json",
             "_vscode/launch.json": ".vscode/launch.json",
             "Prepare-DebugSession.ps1.template": "Prepare-DebugSession.ps1"

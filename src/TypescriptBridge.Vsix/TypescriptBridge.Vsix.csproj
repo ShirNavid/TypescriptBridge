@@ -10,29 +10,18 @@
 
     <VSSDKBuildToolsAutoSetup>true</VSSDKBuildToolsAutoSetup>
     <VsixDeployOnDebug>false</VsixDeployOnDebug>
-    <GeneratePkgDefFile>true</GeneratePkgDefFile>
 
     <PackageId>TypescriptBridge.Vsix</PackageId>
     <Version>1.0.1</Version>
     <AssemblyVersion>1.0.1.0</AssemblyVersion>
     <FileVersion>1.0.1.0</FileVersion>
     <Authors>ShirNavid</Authors>
-    <Description>Visual Studio extension for TypescriptBridge. Provides IntelliSense for config.json.</Description>
+    <Description>Visual Studio extension for TypescriptBridge. Provides IntelliSense and validation for config.json.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectCapability Include="CreateVsixContainer" />
-  </ItemGroup>
-
-  <!--
-    The DebugHost library holds runtime glue (HTTP host, browser launcher,
-    Edge locator, port allocator, Job Object wrapper). It is a project
-    reference during development; it will be replaced with a PackageReference
-    in the final packaging architecture.
-  -->
-  <ItemGroup>
-    <ProjectReference Include="..\TypescriptBridge.DebugHost\TypescriptBridge.DebugHost.csproj" />
   </ItemGroup>
 
   <!--
@@ -51,49 +40,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <VSCTCompile Include="TypescriptBridge.vsct">
-      <ResourceName>Menus.ctmenu</ResourceName>
-      <SubType>Designer</SubType>
-    </VSCTCompile>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.14.40265" ExcludeAssets="runtime" />
     <PackageReference Include="System.ComponentModel.Composition" Version="9.0.0" />
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="18.5.38461" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="System.Windows.Forms" />
-    <Reference Include="System.Design" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="Microsoft.WebTools.Languages.Json"
                Condition="'$(VsInstallRoot)' != '' AND Exists('$(VsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll')">
       <HintPath>$(VsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll</HintPath>
       <Private>false</Private>
     </Reference>
-  </ItemGroup>
-
-  <!--
-    Ship the Tool and esbuild inside the VSIX so that the extension can
-    run a debug session without depending on a separate NuGet install
-    in the consuming project. The paths mirror what ToolRunner expects:
-      tools\net8.0\any\TypescriptBridge.Tool.dll
-      tools\esbuild\win-x64\esbuild.exe
-  -->
-  <ItemGroup>
-    <Content Include="..\TypescriptBridge.Tool\bin\$(Configuration)\net8.0\**\*"
-             Exclude="..\TypescriptBridge.Tool\bin\$(Configuration)\net8.0\**\*.pdb"
-             Link="tools\net8.0\any\%(RecursiveDir)%(Filename)%(Extension)">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>tools\net8.0\any</VSIXSubPath>
-    </Content>
-
-    <Content Include="..\..\tools\esbuild\win-x64\esbuild.exe"
-             Link="tools\esbuild\win-x64\esbuild.exe">
-      <IncludeInVSIX>true</IncludeInVSIX>
-      <VSIXSubPath>tools\esbuild\win-x64</VSIXSubPath>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -106,9 +64,3 @@
   </ItemGroup>
 
 </Project>
-
-
-
-
-
-

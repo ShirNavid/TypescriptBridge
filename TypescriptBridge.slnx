@@ -2,11 +2,9 @@
   <Folder Name="/src/">
     <Project Path="src/TypescriptBridge.Build/TypescriptBridge.Build.csproj" />
     <Project Path="src/TypescriptBridge.Tool/TypescriptBridge.Tool.csproj" />
-    <Project Path="src/TypescriptBridge.DebugHost/TypescriptBridge.DebugHost.csproj" />
     <Project Path="src/TypescriptBridge.Vsix/TypescriptBridge.Vsix.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TypescriptBridge.IntegrationTests/TypescriptBridge.IntegrationTests.csproj" />
   </Folder>
 </Solution>
-

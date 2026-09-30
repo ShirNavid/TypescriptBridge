@@ -10,7 +10,7 @@
     <DisplayName>TypescriptBridge</DisplayName>
     <Description xml:space="preserve">IntelliSense and validation for config.json files.</Description>
     <MoreInfo>https://github.com/ShirNavid/TypescriptBridge</MoreInfo>
-	<Icon>icon.png</Icon>
+    <Icon>icon.png</Icon>
     <Tags>typescript, bridge, json, schema, intellisense</Tags>
   </Metadata>
   <Installation>
@@ -29,13 +29,5 @@
            d:Source="Project"
            d:ProjectName="TypescriptBridge.Vsix"
            Path="|TypescriptBridge.Vsix|" />
-    <Asset Type="Microsoft.VisualStudio.VsPackage"
-           d:Source="Project"
-           d:ProjectName="%CurrentProject%"
-           Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
   </Assets>
 </PackageManifest>
-
-
-
-
