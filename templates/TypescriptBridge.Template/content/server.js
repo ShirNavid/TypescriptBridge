@@ -68,7 +68,9 @@ function readJson(filePath, description) {
         fatal("failed to read " + description + ": " + err.message);
     }
     try {
-        return JSON.parse(raw);
+        // Windows PowerShell can save UTF-8 JSON with a leading BOM.
+        // Strip it before parsing so a valid configuration still loads.
+        return JSON.parse(raw.replace(/^\uFEFF/, ""));
     } catch (err) {
         fatal("invalid JSON in " + description + ": " + err.message);
     }
@@ -156,6 +158,21 @@ function loadTsTarget() {
     return target;
 }
 
+// Source maps are served from the HTTP root, while esbuild writes source
+// paths relative to the map's physical directory under obj/. Rewrite
+// project sources so the debugger resolves them against webRoot.
+function normalizeSourceMapSources(sourceMap) {
+    sourceMap.sources = sourceMap.sources.map((source) => {
+        const absolute = path.resolve(debugRoot, source);
+        const relative = path.relative(projectRoot, absolute);
+        if (relative === ".." || relative.startsWith(".." + path.sep) || path.isAbsolute(relative)) {
+            return source;
+        }
+        return relative.split(path.sep).join("/");
+    });
+    return sourceMap;
+}
+
 function prepareDebugArtifacts(target, format) {
     if (!fs.existsSync(appEntryPoint)) {
         fatal("entry point not found: " + appEntryPoint);
@@ -180,6 +197,8 @@ function prepareDebugArtifacts(target, format) {
     if (result.status !== 0) fatal("esbuild failed with exit code " + result.status);
     if (!fs.existsSync(debugJsPath)) fatal("esbuild did not produce " + debugJsPath);
     if (!fs.existsSync(debugMapPath)) fatal("esbuild did not produce " + debugMapPath);
+    const sourceMap = JSON.parse(fs.readFileSync(debugMapPath, "utf8"));
+    fs.writeFileSync(debugMapPath, JSON.stringify(normalizeSourceMapSources(sourceMap)), "utf8");
     fs.writeFileSync(debugHtmlPath, buildHtml(), "utf8");
     info("debug artifacts prepared at " + debugRoot);
 }
@@ -297,6 +316,10 @@ function killBrowserSafely(pid) {
     killProcessTree(pid);
 }
 
-main().catch((err) => {
-    fatal(err.message || String(err));
-});
+if (require.main === module) {
+    main().catch((err) => {
+        fatal(err.message || String(err));
+    });
+}
+
+module.exports = { normalizeSourceMapSources };

@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "TypescriptBridge": {
+      "commandName": "typescript-bridge"
+    }
+  }
+}

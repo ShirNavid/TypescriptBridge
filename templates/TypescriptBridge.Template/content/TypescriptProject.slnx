@@ -1,4 +1,3 @@
 <Solution>
-  <Project Path="TypescriptProject.esproj" DefaultStartup="true" />
-  <Project Path="TypescriptProject.Provider.csproj" />
+  <Project Path="TypescriptProject.csproj" DefaultStartup="true" />
 </Solution>

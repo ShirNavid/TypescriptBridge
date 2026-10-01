@@ -2,9 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Library</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 
+    <!-- Show only the files that a developer needs in Solution Explorer. -->
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
@@ -12,10 +14,9 @@
 
   <ItemGroup>
     <Compile Include="Bridge.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="TypescriptBridge.Build" Version="1.0.1" />
+    <None Include="ts\src\**\*.ts" Exclude="ts\src\default-definitions\**" />
+    <None Include="ts\package.json;ts\tsconfig.json;config.json;README.md" />
+    <PackageReference Include="TypescriptBridge.Build" Version="1.0.3" />
   </ItemGroup>
 
 </Project>

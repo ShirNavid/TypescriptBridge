@@ -112,7 +112,8 @@ static int Run(string[] args)
         var csContent = CSharpGenerator.Generate(
             jsDebugContent,
             jsReleaseContent,
-            config.Output);
+            config.Output,
+            options.RootNamespace);
 
         // Write Bridge.cs next to the project file, only if content changed.
         var csPath = Path.Combine(
@@ -173,6 +174,9 @@ internal sealed class ToolOptions
     // still produce a deterministic BUILD_MODE value.
     public string Configuration { get; init; } = "Debug";
 
+    // The namespace of the generated C# provider (normally RootNamespace).
+    public string? RootNamespace { get; init; }
+
     // Parses the command line arguments into a ToolOptions instance.
     public static ToolOptions Parse(string[] args)
     {
@@ -181,6 +185,7 @@ internal sealed class ToolOptions
         string? intermediate = null;
         string? esbuildPath = null;
         string? configuration = null;
+        string? rootNamespace = null;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -219,6 +224,13 @@ internal sealed class ToolOptions
                         args,
                         ref i,
                         "--configuration");
+                    break;
+
+                case "--namespace":
+                    rootNamespace = RequireValue(
+                        args,
+                        ref i,
+                        "--namespace");
                     break;
 
                 // Reject arguments that belonged to the removed debug mode.
@@ -280,6 +292,7 @@ internal sealed class ToolOptions
             IntermediateOutputPath = Path.GetFullPath(intermediate, Path.GetFullPath(projectDir)),
             EsbuildPath = esbuildPath,
             Configuration = configuration,
+            RootNamespace = rootNamespace,
         };
     }
 
@@ -308,7 +321,7 @@ internal sealed class ToolOptions
         Console.WriteLine();
         Console.WriteLine("Usage:");
         Console.WriteLine(
-            "  TypescriptBridge.Tool --config <path> --project <path> --intermediate <path> [--esbuild <path>] [--configuration <name>]");
+            "  TypescriptBridge.Tool --config <path> --project <path> --intermediate <path> [--esbuild <path>] [--configuration <name>] [--namespace <name>]");
         Console.WriteLine();
         Console.WriteLine("The Tool has no debug mode. Debug artifact generation is handled by server.js in the generated project.");
     }

@@ -110,14 +110,14 @@
   <Target Name="TypescriptBridgeGenerate"
           BeforeTargets="BeforeCompile;CoreCompile"
           DependsOnTargets="TypescriptBridgePrepareTools"
-          Inputs="$(TypescriptBridgeEntryPoint);$(TypescriptBridgeConfigPath);$(TypescriptBridgeTsConfigPath)"
+          Inputs="$(MSBuildProjectDirectory)\ts\src\**\*.ts;$(TypescriptBridgeConfigPath);$(TypescriptBridgeTsConfigPath)"
           Outputs="$(MSBuildProjectDirectory)\Bridge.cs">
 
     <Message Importance="high" Text="TypescriptBridge: generating Bridge.cs from ts/src/app.ts" />
 
     <MakeDir Directories="$(TypescriptBridgeIntermediatePath)" />
 
-    <Exec Command="dotnet exec &quot;$(TypescriptBridgeToolPath)&quot; --config &quot;$(TypescriptBridgeConfigPath)&quot; --project &quot;$(MSBuildProjectDirectory)&quot; --intermediate &quot;$(TypescriptBridgeIntermediatePath)&quot; --configuration &quot;$(Configuration)&quot; --esbuild &quot;$(TypescriptBridgeLocalEsbuildPath)&quot;"
+    <Exec Command="dotnet exec &quot;$(TypescriptBridgeToolPath)&quot; --config &quot;$(TypescriptBridgeConfigPath)&quot; --project &quot;$(MSBuildProjectDirectory)&quot; --intermediate &quot;$(TypescriptBridgeIntermediatePath)&quot; --configuration &quot;$(Configuration)&quot; --namespace &quot;$(RootNamespace)&quot; --esbuild &quot;$(TypescriptBridgeLocalEsbuildPath)&quot;"
           WorkingDirectory="$(MSBuildProjectDirectory)"
           ContinueOnError="false" />
 

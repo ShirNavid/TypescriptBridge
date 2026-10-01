@@ -12,11 +12,10 @@
     <VsixDeployOnDebug>false</VsixDeployOnDebug>
 
     <PackageId>TypescriptBridge.Vsix</PackageId>
-    <Version>1.0.1</Version>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
+    <AssemblyVersion>$(Version).0</AssemblyVersion>
+    <FileVersion>$(Version).0</FileVersion>
     <Authors>ShirNavid</Authors>
-    <Description>Visual Studio extension for TypescriptBridge. Provides IntelliSense and validation for config.json.</Description>
+    <Description>Debug TypeScript in Visual Studio with breakpoints from a single C# library project.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
@@ -25,18 +24,36 @@
   </ItemGroup>
 
   <!--
-    BridgeSchemaProvider and BridgeSchemaSelector require
-    Microsoft.WebTools.Languages.Json, which is only available inside
-    a Visual Studio installation. They are removed from the default
-    compile set and re-added only when the reference can be resolved.
+    The Visual Studio installation path.
+
+    When building from inside Visual Studio, VsInstallRoot is set
+    automatically. When building from the command line with dotnet
+    build, it is empty. In that case we fall back to a known-good
+    path for Visual Studio 2026 Community.
+
+    Override VsInstallRoot on the command line if Visual Studio is
+    installed elsewhere.
+  -->
+  <PropertyGroup>
+    <VsInstallRootFallback Condition="'$(VsInstallRootFallback)' == ''">C:\Program Files\Microsoft Visual Studio\18\Community</VsInstallRootFallback>
+    <EffectiveVsInstallRoot Condition="'$(VsInstallRoot)' != ''">$(VsInstallRoot)</EffectiveVsInstallRoot>
+    <EffectiveVsInstallRoot Condition="'$(EffectiveVsInstallRoot)' == ''">$(VsInstallRootFallback)</EffectiveVsInstallRoot>
+  </PropertyGroup>
+
+  <!--
+    BridgeSchemaProvider and BridgeSchemaSelector are temporarily
+    excluded from the compile set.
+
+    They depend on a TypescriptBridge.Vsix.Browser folder that has not
+    been created yet. They will be restored in a later development
+    phase once that folder is in place.
+
+    During Phase 1 the VSIX only needs to build and register the
+    launch profile provider.
   -->
   <ItemGroup>
     <Compile Remove="BridgeSchemaProvider.cs" />
     <Compile Remove="BridgeSchemaSelector.cs" />
-    <Compile Include="BridgeSchemaProvider.cs"
-             Condition="'$(VsInstallRoot)' != '' AND Exists('$(VsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll')" />
-    <Compile Include="BridgeSchemaSelector.cs"
-             Condition="'$(VsInstallRoot)' != '' AND Exists('$(VsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll')" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,10 +64,34 @@
 
   <ItemGroup>
     <Reference Include="System.ComponentModel.Composition" />
+
     <Reference Include="Microsoft.WebTools.Languages.Json"
-               Condition="'$(VsInstallRoot)' != '' AND Exists('$(VsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll')">
-      <HintPath>$(VsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll</HintPath>
+               Condition="Exists('$(EffectiveVsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll')">
+      <HintPath>$(EffectiveVsInstallRoot)\Common7\IDE\Extensions\Microsoft\Web Tools\Languages\Microsoft.WebTools.Languages.Json.dll</HintPath>
       <Private>false</Private>
+    </Reference>
+
+    <Reference Include="Microsoft.VisualStudio.ProjectSystem"
+               Condition="Exists('$(EffectiveVsInstallRoot)\Common7\IDE\CommonExtensions\Microsoft\Project\Microsoft.VisualStudio.ProjectSystem.dll')">
+      <HintPath>$(EffectiveVsInstallRoot)\Common7\IDE\CommonExtensions\Microsoft\Project\Microsoft.VisualStudio.ProjectSystem.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+
+    <Reference Include="Microsoft.VisualStudio.ProjectSystem.VS"
+               Condition="Exists('$(EffectiveVsInstallRoot)\Common7\IDE\CommonExtensions\Microsoft\Project\Microsoft.VisualStudio.ProjectSystem.VS.dll')">
+      <HintPath>$(EffectiveVsInstallRoot)\Common7\IDE\CommonExtensions\Microsoft\Project\Microsoft.VisualStudio.ProjectSystem.VS.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+
+    <Reference Include="Microsoft.VisualStudio.ProjectSystem.Managed.VS"
+               Condition="Exists('$(EffectiveVsInstallRoot)\Common7\IDE\Extensions\Microsoft\ManagedProjectSystem\Microsoft.VisualStudio.ProjectSystem.Managed.VS.dll')">
+      <HintPath>$(EffectiveVsInstallRoot)\Common7\IDE\Extensions\Microsoft\ManagedProjectSystem\Microsoft.VisualStudio.ProjectSystem.Managed.VS.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.ProjectSystem.Managed"
+               Condition="Exists('$(EffectiveVsInstallRoot)\Common7\IDE\Extensions\Microsoft\ManagedProjectSystem\Microsoft.VisualStudio.ProjectSystem.Managed.dll')">
+      <HintPath>$(EffectiveVsInstallRoot)\Common7\IDE\Extensions\Microsoft\ManagedProjectSystem\Microsoft.VisualStudio.ProjectSystem.Managed.dll</HintPath>
+      <Private>true</Private>
     </Reference>
   </ItemGroup>
 
@@ -58,9 +99,9 @@
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>
-    <None Include="icon.png"
-          IncludeInVSIX="true"
-          PackagePath="icon.png" />
+    <Content Include="icon.png"
+             IncludeInVSIX="true"
+             VSIXSubPath="." />
   </ItemGroup>
 
 </Project>

@@ -3,6 +3,7 @@ bin/
 obj/
 artifacts/*.nupkg
 artifacts/*.snupkg
+artifacts/*.vsix
 
 # IDE
 /.vs/

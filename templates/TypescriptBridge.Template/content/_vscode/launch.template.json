@@ -6,7 +6,7 @@
       "type": "__TSB_BROWSER__",
       "request": "launch",
       "url": "http://127.0.0.1:__TSB_PORT__/index.html",
-      "webRoot": "${workspaceFolder}",
+      "webRoot": "__TSB_PROJECT_DIR__",
       "userDataDir": "__TSB_USER_DATA_DIR__"
     }
   ]

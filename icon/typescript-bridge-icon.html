@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypescriptBridge Icon</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            min-height: 100vh;
+            background: #111111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: #E0E0E0;
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 400;
+            letter-spacing: 1px;
+            color: #8A9BB8;
+            margin: 0;
+        }
+
+        .preview {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6),
+                        0 0 0 1px rgba(120, 180, 255, 0.1);
+        }
+
+        canvas {
+            width: 420px;
+            height: 420px;
+            display: block;
+        }
+
+        button {
+            background: linear-gradient(135deg, #3E7BD6 0%, #14A0C7 100%);
+            border: none;
+            color: #FFFFFF;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 14px 32px;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(62, 123, 214, 0.35);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(62, 123, 214, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 16px rgba(62, 123, 214, 0.4);
+        }
+
+        .hint {
+            font-size: 13px;
+            color: #556070;
+            margin: -16px 0 0 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>TypeScript Bridge — Icon Preview</h1>
+
+    <div class="preview">
+        <canvas id="icon" width="1024" height="1024"></canvas>
+    </div>
+
+    <button id="downloadBtn">⬇  Download 128×128 PNG</button>
+    <p class="hint">Output: typescript-bridge-icon.png</p>
+
+<script>
+    const canvas = document.getElementById("icon");
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width;
+    const H = canvas.height;
+    const cx = W / 2;
+    const cy = H / 2;
+
+    // ---------- Background ----------
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, "#0A0E1A");
+    bg.addColorStop(1, "#05070A");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // ---------- Soft radial glow ----------
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.6);
+    glow.addColorStop(0, "rgba(80, 140, 220, 0.18)");
+    glow.addColorStop(1, "rgba(80, 140, 220, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // ---------- Layout ----------
+    const csX = W * 0.25;   // C# سمت چپ
+    const tsX = W * 0.675;  // TS
+
+    // ---------- C# (سمت چپ) ----------
+    ctx.save();
+    ctx.font = `700 ${W * 0.28}px "Segoe UI", Arial, sans-serif`;
+    ctx.fillStyle = "#A15FD9";
+    ctx.shadowColor = "rgba(160, 95, 220, 0.75)";
+    ctx.shadowBlur = 26;
+    ctx.fillText("C#", csX, cy);
+    ctx.restore();
+
+    // ---------- آکولادها ----------
+    const braceLeftOffset  = W * 0.180;
+    const braceRightOffset = W * 0.175;
+    const braceSize        = W * 0.56;
+
+    ctx.save();
+    ctx.font = `300 ${braceSize}px "Segoe UI", Arial, sans-serif`;
+    ctx.fillStyle = "#2A4A80";
+    ctx.shadowColor = "rgba(90, 150, 240, 0.55)";
+    ctx.shadowBlur = 28;
+
+    ctx.fillText("{", tsX - braceLeftOffset,  cy);
+    ctx.fillText("}", tsX + braceRightOffset, cy);
+    ctx.restore();
+
+    // ---------- TS داخل آکولاد ----------
+    ctx.save();
+    ctx.font = `700 ${W * 0.24}px "Segoe UI", Arial, sans-serif`;
+    ctx.fillStyle = "#22B6DD";
+    ctx.shadowColor = "rgba(34, 182, 221, 0.85)";
+    ctx.shadowBlur = 26;
+    ctx.fillText("TS", tsX, cy + W * 0.01);
+    ctx.restore();
+
+    // ---------- Download Handler ----------
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+        const out = document.createElement("canvas");
+        out.width = 128;
+        out.height = 128;
+        const octx = out.getContext("2d");
+        octx.imageSmoothingEnabled = true;
+        octx.imageSmoothingQuality = "high";
+        octx.drawImage(canvas, 0, 0, 128, 128);
+
+        const link = document.createElement("a");
+        link.download = "typescript-bridge-icon.png";
+        link.href = out.toDataURL("image/png");
+        link.click();
+    });
+</script>
+
+</body>
+</html>

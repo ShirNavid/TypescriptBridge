@@ -5,9 +5,7 @@
 # .vscode/launch.json from .vscode/launch.template.json with the port,
 # browser, and user data directory substituted.
 #
-# This script is invoked by the .esproj's PrepareDebugSession target
-# before every F5. Visual Studio re-reads launch.json on every F5
-# (verified in C0-Report), so the substitution takes effect immediately.
+# The VSIX invokes this script before each F5 session.
 
 [CmdletBinding()]
 param(
@@ -86,6 +84,7 @@ New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
 $template = Get-Content $templatePath -Raw
 $template = $template.Replace('__TSB_PORT__', "$port")
 $template = $template.Replace('__TSB_BROWSER__', $browser)
+$template = $template.Replace('__TSB_PROJECT_DIR__', $ProjectDir.Replace('\', '/'))
 $template = $template.Replace('__TSB_USER_DATA_DIR__', $profileDir.Replace('\', '/'))
 
 Set-Content -Path $outputPath -Value $template -Encoding utf8

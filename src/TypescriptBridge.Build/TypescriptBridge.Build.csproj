@@ -9,7 +9,7 @@
 
     <PackageId>TypescriptBridge.Build</PackageId>
     <Authors>ShirNavid</Authors>
-    <Description>MSBuild integration for TypescriptBridge. Compiles TypeScript into C# readonly fields at build time, with full JSON Schema-based IntelliSense and validation.</Description>
+    <Description>MSBuild integration for TypescriptBridge. Compiles TypeScript into generated C# readonly fields at build time.</Description>
     <PackageTags>typescript;msbuild;build;codegen;schema;esbuild</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/ShirNavid/TypescriptBridge</PackageProjectUrl>

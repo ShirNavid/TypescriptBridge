@@ -9,8 +9,8 @@
 
     <PackageId>TypescriptBridge.Template</PackageId>
     <Authors>ShirNavid</Authors>
-    <Description>Template for creating TypescriptBridge projects. Includes JSON Schema for full IntelliSense and validation of config.json.</Description>
-    <PackageTags>dotnet-new;templates;typescript;codegen;schema</PackageTags>
+    <Description>Template for creating TypescriptBridge projects. Creates a single C# library project with TypeScript debugging in Visual Studio.</Description>
+    <PackageTags>dotnet-new;templates;typescript;codegen;debugging</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/ShirNavid/TypescriptBridge</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ShirNavid/TypescriptBridge</RepositoryUrl>

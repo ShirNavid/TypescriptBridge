@@ -14,6 +14,19 @@ public sealed class CSharpGeneratorTests
     private const string DebugJs = "console.log(\"debug\");";
     private const string ReleaseJs = "console.log(\"release\");";
 
+    // Verifies that C# consumers can import the generated project namespace.
+    [Fact]
+    public void Generate_UsesProjectNamespaceWhenProvided()
+    {
+        var result = CSharpGenerator.Generate(
+            DebugJs,
+            ReleaseJs,
+            DefaultOutput,
+            "MyApp.Scripts");
+
+        Assert.Contains("namespace MyApp.Scripts;\n\npublic static class TypescriptProvider", result);
+    }
+
     // Verifies that the generated class and field names appear in the output.
     [Fact]
     public void Generate_UsesConfiguredClassNameAndFieldName()
