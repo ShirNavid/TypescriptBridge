@@ -49,3 +49,15 @@ Copy-Item src/TypescriptBridge.Vsix/bin/Release/net472/TypescriptBridge.Vsix.vsi
 ```
 
 Publish the two `.nupkg` files to NuGet and upload the `.vsix` to Visual Studio Marketplace after checking the generated project in Visual Studio.
+
+## Project status and test entrypoints
+
+The build injects `PROJECT_STATUS` as `"Application"` for executable projects and `"Library"` otherwise. Set `isTestProject` to `true` in `config.json` to use the test entrypoint. Paths are relative to `ts/`:
+
+```json
+{
+  "isTestProject": false,
+  "entrypoint": "src/app.ts",
+  "testEntrypoint": "tests/index.ts"
+}
+```

@@ -10,6 +10,9 @@ internal static class SchemaValidator
         "bundle",
         "release-minify",
         "run",
+        "isTestProject",
+        "entrypoint",
+        "testEntrypoint",
     };
 
     private static readonly HashSet<string> AllowedOutputProperties = new(StringComparer.Ordinal)
@@ -173,6 +176,12 @@ internal static class SchemaValidator
                     "Move \"target\" to tsconfig.json compilerOptions.target " +
                     "and \"format\" to config.json bundle.format.");
             }
+
+            if (property.Name == "isTestProject" && property.Value.ValueKind != JsonValueKind.True && property.Value.ValueKind != JsonValueKind.False)
+                Fail("$.isTestProject", "must be a boolean.");
+
+            if (property.Name is "entrypoint" or "testEntrypoint" && property.Value.ValueKind != JsonValueKind.String)
+                Fail($"$.{property.Name}", "must be a string.");
 
             if (!AllowedRootProperties.Contains(property.Name))
             {

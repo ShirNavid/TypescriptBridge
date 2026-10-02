@@ -4,7 +4,7 @@
                  xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
     <Identity Id="TypescriptBridge.Vsix.7b1d5e5e-2e6f-4f2e-9a1a-9b7c2e6b3f1a"
-              Version="1.0.3"
+              Version="1.0.4"
               Language="en-US"
               Publisher="ShirNavid" />
     <DisplayName>TypescriptBridge</DisplayName>

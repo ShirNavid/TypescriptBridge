@@ -45,6 +45,9 @@
     <!-- Path to the user's TypeScript entry point. -->
     <TypescriptBridgeEntryPoint Condition="'$(TypescriptBridgeEntryPoint)' == ''">$(MSBuildProjectDirectory)\ts\src\app.ts</TypescriptBridgeEntryPoint>
 
+    <TypescriptBridgeProjectStatus Condition="'$(TypescriptBridgeProjectStatus)' == '' and ('$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe')">Application</TypescriptBridgeProjectStatus>
+    <TypescriptBridgeProjectStatus Condition="'$(TypescriptBridgeProjectStatus)' == ''">Library</TypescriptBridgeProjectStatus>
+
     <!-- Intermediate directory for the tool's scratch files. -->
     <TypescriptBridgeIntermediatePath Condition="'$(TypescriptBridgeIntermediatePath)' == ''">$(BaseIntermediateOutputPath)TypescriptBridge</TypescriptBridgeIntermediatePath>
 
@@ -110,14 +113,14 @@
   <Target Name="TypescriptBridgeGenerate"
           BeforeTargets="BeforeCompile;CoreCompile"
           DependsOnTargets="TypescriptBridgePrepareTools"
-          Inputs="$(MSBuildProjectDirectory)\ts\src\**\*.ts;$(TypescriptBridgeConfigPath);$(TypescriptBridgeTsConfigPath)"
+          Inputs="$(MSBuildProjectDirectory)\ts\**\*.ts;$(TypescriptBridgeConfigPath);$(TypescriptBridgeTsConfigPath)"
           Outputs="$(MSBuildProjectDirectory)\Bridge.cs">
 
     <Message Importance="high" Text="TypescriptBridge: generating Bridge.cs from ts/src/app.ts" />
 
     <MakeDir Directories="$(TypescriptBridgeIntermediatePath)" />
 
-    <Exec Command="dotnet exec &quot;$(TypescriptBridgeToolPath)&quot; --config &quot;$(TypescriptBridgeConfigPath)&quot; --project &quot;$(MSBuildProjectDirectory)&quot; --intermediate &quot;$(TypescriptBridgeIntermediatePath)&quot; --configuration &quot;$(Configuration)&quot; --namespace &quot;$(RootNamespace)&quot; --esbuild &quot;$(TypescriptBridgeLocalEsbuildPath)&quot;"
+    <Exec Command="dotnet exec &quot;$(TypescriptBridgeToolPath)&quot; --config &quot;$(TypescriptBridgeConfigPath)&quot; --project &quot;$(MSBuildProjectDirectory)&quot; --intermediate &quot;$(TypescriptBridgeIntermediatePath)&quot; --configuration &quot;$(Configuration)&quot; --project-status &quot;$(TypescriptBridgeProjectStatus)&quot; --namespace &quot;$(RootNamespace)&quot; --esbuild &quot;$(TypescriptBridgeLocalEsbuildPath)&quot;"
           WorkingDirectory="$(MSBuildProjectDirectory)"
           ContinueOnError="false" />
 

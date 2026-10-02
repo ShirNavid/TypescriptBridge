@@ -31,6 +31,8 @@ internal sealed class EsbuildRunner
         string format,
         ReleaseMinifyConfig releaseMinify,
         string buildMode,
+        string projectStatus,
+        bool isTestProject,
         string workingDirectory)
     {
         var args = BuildArgs(
@@ -38,12 +40,22 @@ internal sealed class EsbuildRunner
             outputPath,
             target,
             format,
-            buildMode);
+            buildMode,
+            projectStatus,
+            isTestProject);
 
         AddMinifyArgs(args, releaseMinify, buildMode);
 
         return Execute(args, workingDirectory);
     }
+
+    internal static List<string> BuildArgs(
+        string entryPoint,
+        string outputPath,
+        string target,
+        string format,
+        string buildMode)
+        => BuildArgs(entryPoint, outputPath, target, format, buildMode, "Library", false);
 
     // Builds the base esbuild argument list.
     internal static List<string> BuildArgs(
@@ -51,7 +63,9 @@ internal sealed class EsbuildRunner
         string outputPath,
         string target,
         string format,
-        string buildMode)
+        string buildMode,
+        string projectStatus,
+        bool isTestProject)
     {
         return new List<string>
         {
@@ -71,6 +85,8 @@ internal sealed class EsbuildRunner
             // the value must be a JSON-encoded string, so "DEBUG" is
             // written as \"DEBUG\" on the command line.
             $"--define:BUILD_MODE=\"{buildMode}\"",
+            $"--define:PROJECT_STATUS=\"{projectStatus}\"",
+            $"--define:IS_TEST_PROJECT={(isTestProject ? "true" : "false")}",
         };
     }
 

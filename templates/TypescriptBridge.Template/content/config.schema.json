@@ -86,6 +86,21 @@
           "default": 45000
         }
       }
+    },
+    "isTestProject": {
+      "type": "boolean",
+      "description": "When true, use the test entrypoint instead of the application entrypoint.",
+      "default": false
+    },
+    "entrypoint": {
+      "type": "string",
+      "description": "Path under ts/ to the application entrypoint.",
+      "default": "src/app.ts"
+    },
+    "testEntrypoint": {
+      "type": "string",
+      "description": "Path under ts/ to the test entrypoint.",
+      "default": "tests/index.ts"
     }
   }
 }

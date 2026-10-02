@@ -13,5 +13,8 @@
   "run": {
     "browser": "edge",
     "port": 45000
-  }
+  },
+  "isTestProject": false,
+  "entrypoint": "src/app.ts",
+  "testEntrypoint": "tests/index.ts"
 }

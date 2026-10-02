@@ -34,6 +34,12 @@ static int Run(string[] args)
             "tsconfig.json");
 
         var target = TsConfigReader.ReadTarget(tsconfigPath);
+        var projectStatus = options.ProjectStatus;
+        var isTestProject = config.IsTestProject;
+        var entrypointRelative = isTestProject ? config.TestEntrypoint : config.Entrypoint;
+        var entrypointPath = entrypointRelative.Replace('/', Path.DirectorySeparatorChar);
+        var appEntryPoint = Path.Combine(options.ProjectDirectory, "ts", entrypointPath);
+        var appEntryPointFullPath = appEntryPoint;
 
         Console.WriteLine($"TypescriptBridge: config loaded from {options.ConfigPath}");
         Console.WriteLine($"  class         = {config.Output.ClassName}");
@@ -43,23 +49,19 @@ static int Run(string[] args)
         Console.WriteLine($"  minify level  = {config.ReleaseMinify.Level}");
         Console.WriteLine($"  keepNames     = {config.ReleaseMinify.KeepNames}");
         Console.WriteLine($"  configuration = {options.Configuration}");
+        Console.WriteLine($"  project status = {projectStatus}");
+        Console.WriteLine($"  test project = {isTestProject}");
+        Console.WriteLine($"  entrypoint = {entrypointRelative}");
 
         // Locate the esbuild binary using the standard lookup chain.
         var esbuildPath = EsbuildLocator.Locate(options.EsbuildPath);
         Console.WriteLine($"  esbuild       = {esbuildPath}");
 
-        // The user's TypeScript entry point.
-        var appEntryPoint = Path.Combine(
-            options.ProjectDirectory,
-            "ts",
-            "src",
-            "app.ts");
-
-        if (!File.Exists(appEntryPoint))
+        if (!File.Exists(appEntryPointFullPath))
         {
             throw new TypescriptBridgeException(
                 ErrorCodes.EntryPointNotFound,
-                $"Entry point not found: {appEntryPoint}");
+                $"Entry point not found: {appEntryPointFullPath}");
         }
 
         // Ensure the intermediate directory exists.
@@ -85,6 +87,8 @@ static int Run(string[] args)
             config.Bundle.Format,
             config.ReleaseMinify,
             "DEBUG",
+            projectStatus,
+            isTestProject,
             options.ProjectDirectory);
 
         Console.WriteLine($"  debug js      = {jsDebugPath}");
@@ -101,6 +105,8 @@ static int Run(string[] args)
             config.Bundle.Format,
             config.ReleaseMinify,
             "RELEASE",
+            projectStatus,
+            isTestProject,
             options.ProjectDirectory);
 
         Console.WriteLine($"  release js    = {jsReleasePath}");
@@ -177,6 +183,8 @@ internal sealed class ToolOptions
     // The namespace of the generated C# provider (normally RootNamespace).
     public string? RootNamespace { get; init; }
 
+    public string ProjectStatus { get; init; } = "Library";
+
     // Parses the command line arguments into a ToolOptions instance.
     public static ToolOptions Parse(string[] args)
     {
@@ -186,6 +194,7 @@ internal sealed class ToolOptions
         string? esbuildPath = null;
         string? configuration = null;
         string? rootNamespace = null;
+        string? projectStatus = null;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -224,6 +233,10 @@ internal sealed class ToolOptions
                         args,
                         ref i,
                         "--configuration");
+                    break;
+
+                case "--project-status":
+                    projectStatus = RequireValue(args, ref i, "--project-status");
                     break;
 
                 case "--namespace":
@@ -293,6 +306,7 @@ internal sealed class ToolOptions
             EsbuildPath = esbuildPath,
             Configuration = configuration,
             RootNamespace = rootNamespace,
+            ProjectStatus = projectStatus is "Application" ? "Application" : "Library",
         };
     }
 
@@ -321,7 +335,7 @@ internal sealed class ToolOptions
         Console.WriteLine();
         Console.WriteLine("Usage:");
         Console.WriteLine(
-            "  TypescriptBridge.Tool --config <path> --project <path> --intermediate <path> [--esbuild <path>] [--configuration <name>] [--namespace <name>]");
+            "  TypescriptBridge.Tool --config <path> --project <path> --intermediate <path> [--esbuild <path>] [--configuration <name>] [--project-status <Application|Library>] [--namespace <name>]");
         Console.WriteLine();
         Console.WriteLine("The Tool has no debug mode. Debug artifact generation is handled by server.js in the generated project.");
     }

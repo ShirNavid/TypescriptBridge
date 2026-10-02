@@ -17,6 +17,15 @@ public sealed class Config
     [JsonPropertyName("run")]
     public RunConfig Run { get; init; } = new();
 
+    [JsonPropertyName("isTestProject")]
+    public bool IsTestProject { get; init; }
+
+    [JsonPropertyName("entrypoint")]
+    public string Entrypoint { get; init; } = "src/app.ts";
+
+    [JsonPropertyName("testEntrypoint")]
+    public string TestEntrypoint { get; init; } = "tests/index.ts";
+
     public static Config Load(string path)
     {
         if (!File.Exists(path))

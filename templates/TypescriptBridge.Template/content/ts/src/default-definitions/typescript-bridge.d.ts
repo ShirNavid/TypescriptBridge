@@ -9,3 +9,7 @@
 // in Release builds it is "RELEASE".
 
 declare const BUILD_MODE: string;
+
+// Project metadata injected at build time.
+declare const PROJECT_STATUS: "Library" | "Application";
+declare const IS_TEST_PROJECT: boolean;
