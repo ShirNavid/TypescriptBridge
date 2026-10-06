@@ -1,7 +1,6 @@
 {
   "output": {
-    "className": "TypescriptProvider",
-    "fieldName": "TypescriptCode"
+    "className": "TypescriptProvider"
   },
   "bundle": {
     "format": "iife"
@@ -12,9 +11,15 @@
   },
   "run": {
     "browser": "edge",
-    "port": 45000
+    "port": 45000,
+    "entrypoint": "main"
   },
   "isTestProject": false,
-  "entrypoint": "src/app.ts",
-  "testEntrypoint": "tests/index.ts"
+  "testEntrypoint": "tests/index.ts",
+  "entrypoints": {
+    "main": {
+      "fieldName": "TypescriptCode",
+      "source": "src/app.ts"
+    }
+  }
 }

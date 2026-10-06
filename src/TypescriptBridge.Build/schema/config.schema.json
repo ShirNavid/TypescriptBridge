@@ -20,7 +20,7 @@
         "fieldName": {
           "type": "string",
           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
-          "description": "Name of the generated C# readonly string field.",
+          "description": "Legacy single-entrypoint field name; also used in test mode.",
           "default": "TypescriptCode"
         }
       }
@@ -84,6 +84,12 @@
           "minimum": 1,
           "maximum": 65535,
           "default": 45000
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the application entrypoint used by F5; defaults to main. Ignored in test mode.",
+          "default": "main"
         }
       }
     },
@@ -101,6 +107,34 @@
       "type": "string",
       "description": "Path under ts/ to the test entrypoint.",
       "default": "tests/index.ts"
+    },
+    "entrypoints": {
+      "type": "object",
+      "description": "Named application bundles. Ignored when isTestProject is true.",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[A-Za-z_][A-Za-z0-9_]*$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fieldName",
+            "source"
+          ],
+          "properties": {
+            "fieldName": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+              "description": "Unique C# field name in the generated class."
+            },
+            "source": {
+              "type": "string",
+              "minLength": 1,
+              "description": "TypeScript source relative to ts/ (for example src/chart.ts)."
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

@@ -33,6 +33,31 @@ public sealed class ConfigTests : IDisposable
         return path;
     }
 
+    // Named entries produce multiple bundles, while test mode keeps one test source.
+    [Fact]
+    public void Load_ResolvesNamedAndTestEntrypointsSeparately()
+    {
+        var path = WriteConfig("""
+            { "entrypoints": {
+                "main": { "fieldName": "MainCode", "source": "src/main.ts" },
+                "chart": { "fieldName": "ChartCode", "source": "src/chart.ts" }
+              }, "run": { "entrypoint": "chart" } }
+            """);
+        var config = Config.Load(path);
+        Assert.Equal(2, config.GetBuildEntries().Count);
+        Assert.Equal("ChartCode", config.GetBuildEntries()[1].FieldName);
+        Assert.Equal("chart", config.Run.Entrypoint);
+
+        path = WriteConfig("""
+            { "isTestProject": true,
+              "entrypoints": { "main": { "fieldName": "MainCode", "source": "src/main.ts" } },
+              "testEntrypoint": "tests/index.ts" }
+            """);
+        config = Config.Load(path);
+        Assert.Single(config.GetBuildEntries());
+        Assert.Equal("tests/index.ts", config.GetBuildEntries()[0].Source);
+    }
+
     // Verifies that a complete valid configuration is read correctly.
     [Fact]
     public void Load_ReadsCompleteValidConfig()

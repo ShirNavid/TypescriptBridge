@@ -47,6 +47,10 @@ foreach ($packageId in @('TypescriptBridge.Build', 'TypescriptBridge.Template'))
         } else {
             $null = Require-Entry $archive 'content/.template.config/icon.png'
             $null = Require-Entry $archive 'content/TypescriptProject.slnx'
+            $null = Require-Entry $archive 'content/ts/src/typescript-bridge/typescript-bridge.ts'
+            if ($archive.GetEntry('content/ts/src/default-definitions/typescript-bridge.d.ts')) {
+                throw 'The template still contains global TypeScript declarations.'
+            }
             [xml] $project = Read-EntryText (Require-Entry $archive 'content/TypescriptProject.csproj')
             $reference = @($project.Project.ItemGroup.PackageReference | Where-Object Include -eq 'TypescriptBridge.Build')
             if ($reference.Count -ne 1 -or $reference[0].Version -ne $version) {

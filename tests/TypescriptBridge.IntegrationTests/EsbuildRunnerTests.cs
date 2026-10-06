@@ -118,7 +118,7 @@ public sealed class EsbuildRunnerTests
             "iife",
             "DEBUG");
 
-        Assert.Contains("--define:BUILD_MODE=\"DEBUG\"", args);
+        Assert.Contains("--define:__TYPESCRIPT_BRIDGE_BUILD_MODE__=\"DEBUG\"", args);
     }
 
     // BuildArgs includes the target, format, and outfile.

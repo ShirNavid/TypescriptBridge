@@ -26,6 +26,22 @@ public sealed class Config
     [JsonPropertyName("testEntrypoint")]
     public string TestEntrypoint { get; init; } = "tests/index.ts";
 
+    // Named application bundles. Null retains the legacy single-entrypoint config.
+    [JsonPropertyName("entrypoints")]
+    public Dictionary<string, EntryPointConfig>? EntryPoints { get; init; }
+
+    public IReadOnlyList<(string Name, string FieldName, string Source)> GetBuildEntries()
+    {
+        if (IsTestProject)
+            return new[] { ("test", Output.FieldName, TestEntrypoint) };
+
+        if (EntryPoints is not null)
+            return EntryPoints.Select(entry =>
+                (entry.Key, entry.Value.FieldName, entry.Value.Source)).ToArray();
+
+        return new[] { ("main", Output.FieldName, Entrypoint) };
+    }
+
     public static Config Load(string path)
     {
         if (!File.Exists(path))
@@ -101,6 +117,14 @@ public sealed class Config
     };
 }
 
+public sealed class EntryPointConfig
+{
+    [JsonPropertyName("fieldName")]
+    public required string FieldName { get; init; }
+
+    [JsonPropertyName("source")]
+    public required string Source { get; init; }
+}
 public sealed class OutputConfig
 {
     [JsonPropertyName("className")]
@@ -134,6 +158,9 @@ public sealed class ReleaseMinifyConfig
 
 public sealed class RunConfig
 {
+    [JsonPropertyName("entrypoint")]
+    public string Entrypoint { get; init; } = "main";
+
     [JsonPropertyName("browser")]
     public string Browser { get; init; } = "edge";
 

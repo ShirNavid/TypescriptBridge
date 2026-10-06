@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { normalizeSourceMapSources } = require("../templates/TypescriptBridge.Template/content/server.js");
+const { normalizeSourceMapSources, resolveEntryPoint } = require("../templates/TypescriptBridge.Template/content/server.js");
 
 // A debug map is stored three directories below the project root.
 // The browser receives it at the HTTP root, so its sources must be
@@ -27,4 +27,23 @@ test("external source paths are preserved", () => {
     normalizeSourceMapSources(sourceMap);
 
     assert.deepEqual(sourceMap.sources, ["../../../../../external.ts"]);
+});
+
+// F5 chooses the configured application source; tests keep their own source.
+test("F5 selects a named application entrypoint", () => {
+    const selected = resolveEntryPoint({
+        run: { entrypoint: "chart" },
+        entrypoints: { main: { source: "src/app.ts" }, chart: { source: "src/chart.ts" } },
+    });
+    assert.ok(selected.endsWith(require("node:path").join("ts", "src", "chart.ts")));
+});
+
+test("test mode ignores named application entrypoints", () => {
+    const selected = resolveEntryPoint({
+        isTestProject: true,
+        run: { entrypoint: "chart" },
+        entrypoints: { chart: { source: "src/chart.ts" } },
+        testEntrypoint: "tests/index.ts",
+    });
+    assert.ok(selected.endsWith(require("node:path").join("ts", "tests", "index.ts")));
 });

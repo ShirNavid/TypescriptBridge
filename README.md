@@ -26,7 +26,7 @@ using MyApp;
 string javascript = TypescriptProvider.TypescriptCode;
 ```
 
-Use `config.json` to choose the generated class and field names, bundle format, release minification, debug browser, and HTTP port. Set the compilation target in `ts/tsconfig.json`. The `BUILD_MODE` global is `"DEBUG"` or `"RELEASE"` according to the C# build configuration.
+Use `config.json` to define multiple named application entrypoints and C# fields. `run.entrypoint` selects which one F5 debugs; test projects still use `testEntrypoint`. Legacy single-entrypoint configurations remain valid. Set the bundle format, release minification, debug browser, and HTTP port there too. Set the compilation target in `ts/tsconfig.json`. Import `BUILD_MODE` from `ts/src/typescript-bridge/typescript-bridge.ts`; its type is `"DEBUG" | "RELEASE"` and its value follows the C# build configuration.
 
 For the generated project layout and further instructions, see its `README.md`.
 
@@ -48,16 +48,23 @@ Copy-Item src/TypescriptBridge.Vsix/bin/Release/net472/TypescriptBridge.Vsix.vsi
 ./tests/ReleaseArtifacts.Tests.ps1
 ```
 
-Publish the two `.nupkg` files to NuGet and upload the `.vsix` to Visual Studio Marketplace after checking the generated project in Visual Studio.
+## Publish version 1.0.5
 
-## Project status and test entrypoints
+1. Sign in to nuget.org and create an API key with Push permission for both package IDs. Publish `artifacts/TypescriptBridge.Build.1.0.5.nupkg` first, then `artifacts/TypescriptBridge.Template.1.0.5.nupkg`:
 
-The build injects `PROJECT_STATUS` as `"Application"` for executable projects and `"Library"` otherwise. Set `isTestProject` to `true` in `config.json` to use the test entrypoint. Paths are relative to `ts/`:
+   ```powershell
+   $apiKey = Read-Host 'NuGet API key'
+   dotnet nuget push artifacts/TypescriptBridge.Build.1.0.5.nupkg --api-key $apiKey --source https://api.nuget.org/v3/index.json
+   dotnet nuget push artifacts/TypescriptBridge.Template.1.0.5.nupkg --api-key $apiKey --source https://api.nuget.org/v3/index.json
+   ```
 
-```json
-{
-  "isTestProject": false,
-  "entrypoint": "src/app.ts",
-  "testEntrypoint": "tests/index.ts"
-}
-```
+2. In the Visual Studio Marketplace publisher portal, edit the existing TypescriptBridge extension and upload `artifacts/TypescriptBridge.Vsix.1.0.5.vsix`; publish the update. Keep its existing publisher, internal name, and VSIX ID.
+3. Once both NuGet packages are available, install the template with `dotnet new install TypescriptBridge.Template@1.0.5`. The template references `TypescriptBridge.Build` version 1.0.5, which NuGet restores on build. Install the VSIX for F5 debugging and restart Visual Studio.
+
+NuGet package versions cannot be overwritten after publication; use a new version if 1.0.5 was already published.
+
+## Named application bundles
+
+Set `entrypoints` in `config.json` to generate one C# field per TypeScript source. For example, `main` and `chart` can generate `MainCode` and `ChartCode`. Set `run.entrypoint` to the name to debug with F5 (default: `main`). The generated project's README includes a full example. Existing single-entrypoint configs remain supported.
+
+The build injects `PROJECT_STATUS` as `"Application"` for executable projects and `"Library"` otherwise. When `isTestProject` is `true`, only `testEntrypoint` is bundled; application entrypoints are ignored. Paths are relative to `ts/`.

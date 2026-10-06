@@ -14,6 +14,23 @@ public sealed class CSharpGeneratorTests
     private const string DebugJs = "console.log(\"debug\");";
     private const string ReleaseJs = "console.log(\"release\");";
 
+    // Each application source gets its own Debug/Release C# field.
+    [Fact]
+    public void Generate_CreatesIndependentFieldsForNamedEntrypoints()
+    {
+        var result = CSharpGenerator.Generate(new[]
+        {
+            new GeneratedBundle("MainCode", "main debug", "main release"),
+            new GeneratedBundle("ChartCode", "chart debug", "chart release"),
+        }, DefaultOutput, "MyApp");
+
+        Assert.Contains("public static readonly string MainCode =", result);
+        Assert.Contains("public static readonly string ChartCode =", result);
+        Assert.Contains("main debug", result);
+        Assert.Contains("chart release", result);
+        Assert.Equal(2, result.Split("#if DEBUG").Length - 1);
+    }
+
     // Verifies that C# consumers can import the generated project namespace.
     [Fact]
     public void Generate_UsesProjectNamespaceWhenProvided()

@@ -14,6 +14,16 @@ public sealed class SchemaValidatorTests
         return doc.RootElement.Clone();
     }
 
+    [Theory]
+    [InlineData("""{ "entrypoints": { "main": { "fieldName": "Code", "source": "src/app.ts" }, "chart": { "fieldName": "Code", "source": "src/chart.ts" } } }""", "unique")]
+    [InlineData("""{ "entrypoints": { "main": { "fieldName": "Code", "source": "../other.ts" } } }""", "under ts/")]
+    [InlineData("""{ "entrypoints": { "main": { "fieldName": "Code", "source": "src/app.ts" } }, "run": { "entrypoint": "chart" } }""", "unknown entrypoint")]
+    public void Validate_RejectsInvalidNamedEntrypoints(string json, string message)
+    {
+        var exception = Assert.Throws<TypescriptBridgeException>(() => SchemaValidator.Validate(Parse(json)));
+        Assert.Contains(message, exception.Message);
+    }
+
     // Verifies that a fully-specified valid configuration passes validation.
     [Fact]
     public void Validate_AcceptsCompleteValidConfig()

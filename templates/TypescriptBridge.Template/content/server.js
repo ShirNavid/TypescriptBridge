@@ -22,7 +22,6 @@ const { spawnSync, spawn } = require("child_process");
 const projectRoot = __dirname;
 const configPath = path.join(projectRoot, "config.json");
 const tsconfigPath = path.join(projectRoot, "ts", "tsconfig.json");
-const appEntryPoint = path.join(projectRoot, "ts", "src", "app.ts");
 
 const objRoot = path.join(projectRoot, "obj", "TypescriptBridge");
 const debugRoot = path.join(objRoot, "debug");
@@ -136,6 +135,23 @@ function locateBrowser(browser) {
     fatal(browser + " is not installed on this machine.");
 }
 
+// Select only the application entry requested for F5; test mode has its own source.
+function resolveEntryPoint(config) {
+    const selected = config.run?.entrypoint ?? "main";
+    const source = config.isTestProject
+        ? (config.testEntrypoint ?? "tests/index.ts")
+        : config.entrypoints
+            ? config.entrypoints[selected]?.source
+            : (config.entrypoint ?? "src/app.ts");
+    if (typeof source !== "string" || !source.trim()) {
+        throw new Error("config.json: unknown run.entrypoint: " + selected);
+    }
+    const entryPoint = path.resolve(projectRoot, "ts", source);
+    const tsRoot = path.join(projectRoot, "ts") + path.sep;
+    if (!entryPoint.startsWith(tsRoot)) throw new Error("config.json: entrypoint must be under ts/.");
+    return entryPoint;
+}
+
 function loadConfig() {
     const config = readJson(configPath, "config.json");
     if (!config || typeof config !== "object") fatal("config.json must be an object.");
@@ -147,7 +163,8 @@ function loadConfig() {
     if (!config.bundle || typeof config.bundle !== "object") fatal("config.json: missing 'bundle' section.");
     const format = config.bundle.format;
     if (format !== "iife" && format !== "esm" && format !== "cjs") fatal("config.json: bundle.format invalid.");
-    return { browser, port, format };
+    const entryPoint = resolveEntryPoint(config);
+    return { browser, port, format, entryPoint, isTestProject: config.isTestProject === true };
 }
 
 function loadTsTarget() {
@@ -173,7 +190,7 @@ function normalizeSourceMapSources(sourceMap) {
     return sourceMap;
 }
 
-function prepareDebugArtifacts(target, format) {
+function prepareDebugArtifacts(target, format, appEntryPoint, isTestProject) {
     if (!fs.existsSync(appEntryPoint)) {
         fatal("entry point not found: " + appEntryPoint);
     }
@@ -185,7 +202,9 @@ function prepareDebugArtifacts(target, format) {
         "--format=" + format,
         "--target=" + target,
         "--outfile=" + debugJsPath,
-        "--define:BUILD_MODE=\"DEBUG\"",
+        "--define:__TYPESCRIPT_BRIDGE_BUILD_MODE__=\"DEBUG\"",
+        "--define:__TYPESCRIPT_BRIDGE_PROJECT_STATUS__=\"Application\"",
+        `--define:__TYPESCRIPT_BRIDGE_IS_TEST_PROJECT__=${isTestProject}`,
         "--keep-names",
         "--sourcemap=linked",
         "--sources-content=true",
@@ -283,7 +302,7 @@ function uniqueProfileDir() {
 async function main() {
     const config = loadConfig();
     const target = loadTsTarget();
-    prepareDebugArtifacts(target, config.format);
+    prepareDebugArtifacts(target, config.format, config.entryPoint, config.isTestProject);
 
     let server;
     try {
@@ -322,4 +341,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { normalizeSourceMapSources };
+module.exports = { normalizeSourceMapSources, resolveEntryPoint };

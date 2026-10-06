@@ -46,6 +46,11 @@ try {
     Invoke-DotNet -arguments @('restore', $projectPath, '--packages', $packageDir, "-p:RestoreSources=$feedDir", '-v:q')
     Invoke-DotNet -arguments @('build', $projectPath, '--no-restore', '-v:q')
 
+    $modulePath = Join-Path $projectDir 'ts\src\typescript-bridge\typescript-bridge.ts'
+    Assert-True (Test-Path -LiteralPath $modulePath) 'Importable TypeScript module is missing.'
+    Assert-True (-not (Test-Path (Join-Path $projectDir 'ts\src\default-definitions\typescript-bridge.d.ts'))) 'Old global declarations remain.'
+    $module = [IO.File]::ReadAllText($modulePath)
+    Assert-True ($module.Contains('export type BUILD_MODE = "DEBUG" | "RELEASE";')) 'BUILD_MODE union type is missing.'
     $bridgePath = Join-Path $projectDir 'Bridge.cs'
     $bridge = [IO.File]::ReadAllText($bridgePath)
     Assert-True ($bridge.Contains('namespace SmokeApp;')) 'Bridge.cs is outside the project namespace.'
@@ -60,14 +65,46 @@ try {
     $config = $config.Replace('"fieldName": "TypescriptCode"', '"fieldName": "SmokeCode"')
     [IO.File]::WriteAllText($configPath, $config, $encoding)
     Invoke-DotNet -arguments @('build', $projectPath, '--no-restore', '-v:q')
+    $bridgePath = Join-Path $projectDir 'Bridge.cs'
     $bridge = [IO.File]::ReadAllText($bridgePath)
     Assert-True ($bridge.Contains('public static class SmokeProvider')) 'config.json did not update the class.'
     Assert-True ($bridge.Contains('public static readonly string SmokeCode')) 'config.json did not update the field.'
+
+    # Named entrypoints must generate independent fields in one provider.
+    $chartPath = Join-Path $projectDir 'ts\src\chart.ts'
+    $reportPath = Join-Path $projectDir 'ts\src\report.ts'
+    [IO.File]::WriteAllText($chartPath, 'console.log("chart payload");', $encoding)
+    [IO.File]::WriteAllText($reportPath, 'console.log("report payload");', $encoding)
+    $settings = [IO.File]::ReadAllText($configPath) | ConvertFrom-Json
+    $settings.entrypoints | Add-Member -NotePropertyName chart -NotePropertyValue ([pscustomobject]@{ fieldName = 'ChartCode'; source = 'src/chart.ts' })
+    $settings.entrypoints | Add-Member -NotePropertyName report -NotePropertyValue ([pscustomobject]@{ fieldName = 'ReportCode'; source = 'src/report.ts' })
+    $settings.run.entrypoint = 'chart'
+    [IO.File]::WriteAllText($configPath, ($settings | ConvertTo-Json -Depth 12), $encoding)
+    Invoke-DotNet -arguments @('build', $projectPath, '--no-restore', '-v:q')
+    $bridgePath = Join-Path $projectDir 'Bridge.cs'
+    $bridge = [IO.File]::ReadAllText($bridgePath)
+    Assert-True ($bridge.Contains('public static readonly string SmokeCode')) 'Main field is missing.'
+    Assert-True ($bridge.Contains('public static readonly string ChartCode')) 'Chart field is missing.'
+    Assert-True ($bridge.Contains('public static readonly string ReportCode')) 'Report field is missing.'
+    Assert-True ($bridge.Contains('chart payload') -and $bridge.Contains('report payload')) 'Separate bundles are missing.'
+
+    # Existing single-entrypoint configs still generate the original field.
+    $settings.PSObject.Properties.Remove('entrypoints')
+    $settings.output | Add-Member -NotePropertyName fieldName -NotePropertyValue 'SmokeCode'
+    $settings.run.entrypoint = 'main'
+    $settings | Add-Member -NotePropertyName entrypoint -NotePropertyValue 'src/app.ts'
+    [IO.File]::WriteAllText($configPath, ($settings | ConvertTo-Json -Depth 12), $encoding)
+    Invoke-DotNet -arguments @('build', $projectPath, '--no-restore', '-v:q')
+    $bridgePath = Join-Path $projectDir 'Bridge.cs'
+    $bridge = [IO.File]::ReadAllText($bridgePath)
+    Assert-True ($bridge.Contains('public static readonly string SmokeCode')) 'Legacy field is missing.'
+    Assert-True (-not $bridge.Contains('public static readonly string ChartCode')) 'Old named field remains in legacy mode.'
 
     # ES2020 preserves optional chaining; ES2019 must transform it.
     $appPath = Join-Path $projectDir 'ts\src\app.ts'
     [IO.File]::AppendAllText($appPath, "`nconsole.log(globalThis?.document?.title ?? 'fallback');`n", $encoding)
     Invoke-DotNet -arguments @('build', $projectPath, '--no-restore', '-v:q')
+    $bridgePath = Join-Path $projectDir 'Bridge.cs'
     $bridge = [IO.File]::ReadAllText($bridgePath)
     Assert-True ($bridge.Contains('globalThis?.document?.title')) 'ES2020 did not preserve optional chaining.'
 
@@ -76,6 +113,7 @@ try {
     Assert-True ($tsconfig.Contains('"target": "es2020"')) 'Unexpected template TypeScript target.'
     [IO.File]::WriteAllText($tsconfigPath, $tsconfig.Replace('"target": "es2020"', '"target": "es2019"'), $encoding)
     Invoke-DotNet -arguments @('build', $projectPath, '--no-restore', '-v:q')
+    $bridgePath = Join-Path $projectDir 'Bridge.cs'
     $bridge = [IO.File]::ReadAllText($bridgePath)
     Assert-True (-not $bridge.Contains('globalThis?.document?.title')) 'tsconfig.json did not change the generated JavaScript.'
     Assert-True ($bridge.Contains('fallback')) 'The transformed expression is missing from Bridge.cs.'

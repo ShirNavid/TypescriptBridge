@@ -15,7 +15,7 @@ public static class ErrorCodes
     // The config.json file parsed but failed schema validation.
     public const string ConfigValidationFailed = "TS_HANDLER0003";
 
-    // The ts/app.ts entry point was not found in the project directory.
+    // A configured TypeScript entrypoint was not found in the project directory.
     public const string EntryPointNotFound = "TS_HANDLER0004";
 
     // The esbuild binary could not be located.

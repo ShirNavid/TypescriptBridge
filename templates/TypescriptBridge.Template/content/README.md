@@ -26,12 +26,12 @@ and attaches the JavaScript/TypeScript debugger. Your breakpoint is hit.
 
 ## Editing TypeScript
 
-The entry point is `ts/src/app.ts`.
+The default application entrypoint is `ts/src/app.ts`. Add named entries in `config.json` to bundle more files into separate C# fields.
 
 You can add more `.ts` files anywhere under `ts/src/`. They appear in
 Solution Explorer automatically and are bundled together.
 
-`BUILD_MODE` is a global constant injected at build time. It is
+Import `BUILD_MODE` from `./typescript-bridge/typescript-bridge` in `ts/src/app.ts`. Its `BUILD_MODE` type is `"DEBUG" | "RELEASE"`. The value is
 `"DEBUG"` in Debug builds and `"RELEASE"` in Release builds. It has
 full IntelliSense.
 
@@ -58,7 +58,10 @@ defaults.
 | Setting | Description | Default |
 | --- | --- | --- |
 | `output.className` | Generated C# class name | `TypescriptProvider` |
-| `output.fieldName` | Generated C# field name | `TypescriptCode` |
+| `output.fieldName` | Legacy single-entrypoint field and test-mode field | `TypescriptCode` |
+| `entrypoints.<name>.fieldName` | C# field for a named application entry | — |
+| `entrypoints.<name>.source` | Source file relative to `ts/` | — |
+| `run.entrypoint` | Named entry to launch with F5 | `main` |
 | `bundle.format` | JavaScript module format | `iife` |
 | `release-minify.level` | Minification for Release | `aggressive` |
 | `release-minify.keepNames` | Preserve names when minified | `true` |
@@ -89,6 +92,7 @@ Then in your C# code:
 | File | Purpose |
 | --- | --- |
 | `ts/src/app.ts` | TypeScript entry point (edit this) |
+| `ts/src/typescript-bridge/typescript-bridge.ts` | Importable build values and their types |
 | `ts/package.json` | npm dependency manifest |
 | `ts/tsconfig.json` | TypeScript compiler settings |
 | `config.json` | Project configuration |
@@ -105,7 +109,7 @@ Explorer. They are maintained automatically:
 - `server.js` — local HTTP server for the debug session
 - `Prepare-DebugSession.ps1` — generates `launch.json` before each F5
 - `.vscode/` — debugger configuration
-- `ts/src/default-definitions/` — TypeScript global declarations
+
 - `ts/node_modules/` — npm packages
 - `obj/` — intermediate build output
 
@@ -119,14 +123,24 @@ Explorer. They are maintained automatically:
   the C# build (either when you build the solution or when an
   external C# project references `MyApp.csproj`).
 
-## Project status and test entrypoints
+## Multiple application entrypoints
 
-The build injects `PROJECT_STATUS` as `"Application"` for executable projects and `"Library"` otherwise. Set `isTestProject` to `true` in `config.json` to use the test entrypoint. Paths are relative to `ts/`:
+For application builds, define named bundles in `config.json`:
 
 ```json
 {
-  "isTestProject": false,
-  "entrypoint": "src/app.ts",
-  "testEntrypoint": "tests/index.ts"
+  "output": { "className": "TypescriptProvider" },
+  "entrypoints": {
+    "main": { "fieldName": "MainCode", "source": "src/main.ts" },
+    "chart": { "fieldName": "ChartCode", "source": "src/chart.ts" },
+    "report": { "fieldName": "ReportCode", "source": "src/report.ts" }
+  },
+  "run": { "entrypoint": "main", "browser": "edge", "port": 45000 }
 }
 ```
+
+Build generates `MainCode`, `ChartCode`, and `ReportCode` in the same C# class. Each is bundled separately with Debug and Release variants. Create the source files under `ts/` first. Set `run.entrypoint` to the entry name to debug with F5; the other bundles are still generated. Names and C# fields must be unique, and `main` is selected by default.
+
+Older configs with `entrypoint: "src/app.ts"` and `output.fieldName` continue to generate one field. For test projects, `isTestProject: true` uses only `testEntrypoint` and `output.fieldName`; named application bundles and `run.entrypoint` are ignored. Paths are relative to `ts/`.
+
+Import `PROJECT_STATUS` and `IS_TEST_PROJECT` from `ts/src/typescript-bridge/typescript-bridge.ts`. The former is injected as `"Application"` for executable projects and `"Library"` otherwise; the latter reflects `isTestProject`.

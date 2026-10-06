@@ -116,7 +116,7 @@
           Inputs="$(MSBuildProjectDirectory)\ts\**\*.ts;$(TypescriptBridgeConfigPath);$(TypescriptBridgeTsConfigPath)"
           Outputs="$(MSBuildProjectDirectory)\Bridge.cs">
 
-    <Message Importance="high" Text="TypescriptBridge: generating Bridge.cs from ts/src/app.ts" />
+    <Message Importance="high" Text="TypescriptBridge: generating Bridge.cs from configured TypeScript entrypoints" />
 
     <MakeDir Directories="$(TypescriptBridgeIntermediatePath)" />
 

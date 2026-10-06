@@ -14,9 +14,9 @@
 
   <ItemGroup>
     <Compile Include="Bridge.cs" />
-    <None Include="ts\src\**\*.ts" Exclude="ts\src\default-definitions\**" />
+    <None Include="ts\src\**\*.ts" />
     <None Include="ts\package.json;ts\tsconfig.json;config.json;README.md" />
-    <PackageReference Include="TypescriptBridge.Build" Version="1.0.4" />
+    <PackageReference Include="TypescriptBridge.Build" Version="1.0.5" />
   </ItemGroup>
 
 </Project>

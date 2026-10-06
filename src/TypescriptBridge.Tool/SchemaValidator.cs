@@ -12,6 +12,7 @@ internal static class SchemaValidator
         "run",
         "isTestProject",
         "entrypoint",
+        "entrypoints",
         "testEntrypoint",
     };
 
@@ -34,6 +35,7 @@ internal static class SchemaValidator
 
     private static readonly HashSet<string> AllowedRunProperties = new(StringComparer.Ordinal)
     {
+        "entrypoint",
         "browser",
         "port",
     };
@@ -152,6 +154,22 @@ internal static class SchemaValidator
         if (root.TryGetProperty("output", out var output))
             ValidateOutput(output);
 
+        if (root.TryGetProperty("entrypoints", out var entrypoints))
+            ValidateEntryPoints(entrypoints);
+
+        // F5 needs one known application entry; test projects use testEntrypoint.
+        if (root.TryGetProperty("run", out var runSettings) &&
+            runSettings.ValueKind == JsonValueKind.Object &&
+            (!root.TryGetProperty("isTestProject", out var testFlag) || testFlag.ValueKind != JsonValueKind.True))
+        {
+            var selected = runSettings.TryGetProperty("entrypoint", out var choice)
+                ? (choice.ValueKind == JsonValueKind.String ? choice.GetString()! : "main")
+                : "main";
+            if (entrypoints.ValueKind == JsonValueKind.Object && !entrypoints.TryGetProperty(selected, out _))
+                Fail("$.run.entrypoint", $"unknown entrypoint \"{selected}\".");
+            if (entrypoints.ValueKind == JsonValueKind.Undefined && selected != "main")
+                Fail("$.run.entrypoint", "requires an entrypoints map.");
+        }
         if (root.TryGetProperty("bundle", out var bundle))
             ValidateBundle(bundle);
 
@@ -190,6 +208,33 @@ internal static class SchemaValidator
         }
     }
 
+    private static void ValidateEntryPoints(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object || !element.EnumerateObject().Any())
+            Fail("$.entrypoints", "must be a non-empty object.");
+
+        var fields = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var entry in element.EnumerateObject())
+        {
+            using var key = JsonDocument.Parse(JsonSerializer.Serialize(entry.Name));
+            ValidateIdentifier(key.RootElement, $"$.entrypoints.{entry.Name}");
+            var location = $"$.entrypoints.{entry.Name}";
+            if (entry.Value.ValueKind != JsonValueKind.Object)
+                Fail(location, "must be an object.");
+            ValidateProperties(entry.Value, new HashSet<string>(StringComparer.Ordinal) { "fieldName", "source" }, location);
+            if (!entry.Value.TryGetProperty("fieldName", out var field))
+                Fail(location + ".fieldName", "is required.");
+            ValidateIdentifier(field, location + ".fieldName");
+            if (!fields.Add(field.GetString()!))
+                Fail(location + ".fieldName", "must be unique.");
+            if (!entry.Value.TryGetProperty("source", out var source) || source.ValueKind != JsonValueKind.String)
+                Fail(location + ".source", "must be a string.");
+            var path = source.GetString()!;
+            if (string.IsNullOrWhiteSpace(path) || path.StartsWith('/') || path.Contains(':') ||
+                path.Split('/', '\\').Any(part => part is ".." or "." or ""))
+                Fail(location + ".source", "must be a relative path under ts/.");
+        }
+    }
     private static void ValidateBundle(JsonElement element)
     {
         if (element.ValueKind != JsonValueKind.Object)
@@ -216,6 +261,9 @@ internal static class SchemaValidator
 
         ValidateProperties(element, AllowedRunProperties, "$.run");
 
+        if (element.TryGetProperty("entrypoint", out var entrypoint) &&
+            (entrypoint.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(entrypoint.GetString())))
+            Fail("$.run.entrypoint", "must be a non-empty string.");
         if (element.TryGetProperty("browser", out var browser))
         {
             if (browser.ValueKind != JsonValueKind.String)

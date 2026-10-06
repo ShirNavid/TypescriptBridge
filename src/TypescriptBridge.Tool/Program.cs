@@ -36,91 +36,48 @@ static int Run(string[] args)
         var target = TsConfigReader.ReadTarget(tsconfigPath);
         var projectStatus = options.ProjectStatus;
         var isTestProject = config.IsTestProject;
-        var entrypointRelative = isTestProject ? config.TestEntrypoint : config.Entrypoint;
-        var entrypointPath = entrypointRelative.Replace('/', Path.DirectorySeparatorChar);
-        var appEntryPoint = Path.Combine(options.ProjectDirectory, "ts", entrypointPath);
-        var appEntryPointFullPath = appEntryPoint;
+        var entries = config.GetBuildEntries();
 
         Console.WriteLine($"TypescriptBridge: config loaded from {options.ConfigPath}");
         Console.WriteLine($"  class         = {config.Output.ClassName}");
-        Console.WriteLine($"  field         = {config.Output.FieldName}");
         Console.WriteLine($"  target        = {target} (from tsconfig.json)");
-        Console.WriteLine($"  format        = {config.Bundle.Format}");
-        Console.WriteLine($"  minify level  = {config.ReleaseMinify.Level}");
-        Console.WriteLine($"  keepNames     = {config.ReleaseMinify.KeepNames}");
         Console.WriteLine($"  configuration = {options.Configuration}");
         Console.WriteLine($"  project status = {projectStatus}");
         Console.WriteLine($"  test project = {isTestProject}");
-        Console.WriteLine($"  entrypoint = {entrypointRelative}");
 
-        // Locate the esbuild binary using the standard lookup chain.
         var esbuildPath = EsbuildLocator.Locate(options.EsbuildPath);
-        Console.WriteLine($"  esbuild       = {esbuildPath}");
+        Directory.CreateDirectory(options.IntermediateOutputPath);
+        var runner = new EsbuildRunner(esbuildPath);
+        var bundles = new List<GeneratedBundle>();
 
-        if (!File.Exists(appEntryPointFullPath))
+        // Test mode uses only testEntrypoint. Applications bundle every named entry.
+        foreach (var (name, fieldName, source) in entries)
         {
-            throw new TypescriptBridgeException(
-                ErrorCodes.EntryPointNotFound,
-                $"Entry point not found: {appEntryPointFullPath}");
+            var sourcePath = Path.Combine(options.ProjectDirectory, "ts",
+                source.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(sourcePath))
+                throw new TypescriptBridgeException(ErrorCodes.EntryPointNotFound,
+                    $"Entry point not found: {sourcePath}");
+
+            // Keep the existing intermediate names for single-entry projects.
+            var stem = entries.Count == 1 ? "typescript-bridge" : $"typescript-bridge.{name}";
+            var debugPath = Path.Combine(options.IntermediateOutputPath, stem + ".debug.js");
+            var releasePath = Path.Combine(options.IntermediateOutputPath, stem + ".release.js");
+
+            runner.Run(sourcePath, debugPath, target, config.Bundle.Format,
+                config.ReleaseMinify, "DEBUG", projectStatus, isTestProject,
+                options.ProjectDirectory);
+            runner.Run(sourcePath, releasePath, target, config.Bundle.Format,
+                config.ReleaseMinify, "RELEASE", projectStatus, isTestProject,
+                options.ProjectDirectory);
+
+            bundles.Add(new GeneratedBundle(fieldName,
+                File.ReadAllText(debugPath), File.ReadAllText(releasePath)));
+            Console.WriteLine($"  {name} -> {fieldName} ({source})");
         }
 
-        // Ensure the intermediate directory exists.
-        var intermediateDir = options.IntermediateOutputPath;
-        Directory.CreateDirectory(intermediateDir);
-
-        // Two esbuild invocations are performed on every build:
-        //   - one with BUILD_MODE="DEBUG"
-        //   - one with BUILD_MODE="RELEASE"
-        // Both payloads are embedded in Bridge.cs and the C# compiler
-        // selects the appropriate payload via #if DEBUG / #else.
-        var runner = new EsbuildRunner(esbuildPath);
-
-        // Debug payload.
-        var jsDebugPath = Path.Combine(
-            intermediateDir,
-            "typescript-bridge.debug.js");
-
-        runner.Run(
-            appEntryPoint,
-            jsDebugPath,
-            target,
-            config.Bundle.Format,
-            config.ReleaseMinify,
-            "DEBUG",
-            projectStatus,
-            isTestProject,
-            options.ProjectDirectory);
-
-        Console.WriteLine($"  debug js      = {jsDebugPath}");
-
-        // Release payload.
-        var jsReleasePath = Path.Combine(
-            intermediateDir,
-            "typescript-bridge.release.js");
-
-        runner.Run(
-            appEntryPoint,
-            jsReleasePath,
-            target,
-            config.Bundle.Format,
-            config.ReleaseMinify,
-            "RELEASE",
-            projectStatus,
-            isTestProject,
-            options.ProjectDirectory);
-
-        Console.WriteLine($"  release js    = {jsReleasePath}");
-
-        // Read both payloads and wrap them into a single C# field.
-        var jsDebugContent = File.ReadAllText(jsDebugPath);
-        var jsReleaseContent = File.ReadAllText(jsReleasePath);
-
-        var csContent = CSharpGenerator.Generate(
-            jsDebugContent,
-            jsReleaseContent,
-            config.Output,
+        var csContent = CSharpGenerator.Generate(bundles, config.Output,
             options.RootNamespace);
-
         // Write Bridge.cs next to the project file, only if content changed.
         var csPath = Path.Combine(
             options.ProjectDirectory,
@@ -166,7 +123,7 @@ internal sealed class ToolOptions
     // Absolute path to config.json.
     public required string ConfigPath { get; init; }
 
-    // Absolute path to the project directory containing ts/app.ts.
+    // Absolute path to the consuming project directory containing ts/.
     public required string ProjectDirectory { get; init; }
 
     // Absolute path to the intermediate output directory.

@@ -21,7 +21,7 @@ internal sealed class EsbuildRunner
     // Runs esbuild against the given entry point and writes the bundled
     // JavaScript to outputPath.
     //
-    // buildMode is injected as BUILD_MODE via --define so that user code
+    // buildMode is injected into the imported BUILD_MODE value via --define so that user code
     // can branch on the build configuration at compile time. The value is
     // expected to be a plain string such as "DEBUG" or "RELEASE".
     public string Run(
@@ -75,18 +75,18 @@ internal sealed class EsbuildRunner
             $"--target={target}",
             $"--outfile={outputPath}",
 
-            // Define BUILD_MODE as a compile-time constant.
+            // Define the module placeholders as compile-time constants.
             //
-            // esbuild will replace every occurrence of the identifier
-            // BUILD_MODE in any bundled module with the literal string
+            // esbuild will replace each placeholder identifier in the imported module.
+            // The BUILD_MODE placeholder is replaced with the literal string
             // value, then tree-shake any branches that become unreachable.
             //
             // The inner quotes are part of the esbuild --define syntax:
             // the value must be a JSON-encoded string, so "DEBUG" is
             // written as \"DEBUG\" on the command line.
-            $"--define:BUILD_MODE=\"{buildMode}\"",
-            $"--define:PROJECT_STATUS=\"{projectStatus}\"",
-            $"--define:IS_TEST_PROJECT={(isTestProject ? "true" : "false")}",
+            $"--define:__TYPESCRIPT_BRIDGE_BUILD_MODE__=\"{buildMode}\"",
+            $"--define:__TYPESCRIPT_BRIDGE_PROJECT_STATUS__=\"{projectStatus}\"",
+            $"--define:__TYPESCRIPT_BRIDGE_IS_TEST_PROJECT__={(isTestProject ? "true" : "false")}",
         };
     }
 
